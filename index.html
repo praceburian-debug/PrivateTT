@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+  <div id="content">
+    <h3>Trackovaný čas</h3>
+    <div id="time-display">Načítání...</div>
+  </div>
+
+  <script>
+    // Seznam ID uživatelů, kteří mají právo vidět čas
+    // Své ID zjistíte na https://trello.com/me.json
+    const ALLOWED_USERS = [
+      'ID_UZIVATELE_1',
+      'ID_UZIVATELE_2'
+    ];
+
+    var t = TrelloPowerUp.initialize({
+      'card-badges': function(t, options) {
+        return t.get('card', 'shared', 'trackedTime')
+        .then(function(time) {
+          const currentMember = t.getContext().member;
+          
+          // Pokud uživatel není v seznamu, nevrátíme žádný odznak
+          if (!ALLOWED_USERS.includes(currentMember)) {
+            return [];
+          }
+
+          return [{
+            text: time ? time + ' hod' : '0 hod',
+            color: 'blue'
+          }];
+        });
+      },
+      'card-back-section': function(t, options) {
+        const currentMember = t.getContext().member;
+
+        if (ALLOWED_USERS.includes(currentMember)) {
+          return {
+            title: 'Soukromý Time Tracking',
+            icon: './icon.png',
+            content: {
+              type: 'iframe',
+              url: t.signUrl('./section.html'), // Zde by byl formulář pro zadání času
+              height: 100
+            }
+          };
+        }
+        return null; // Pro ostatní sekce vůbec neexistuje
+      }
+    });
+  </script>
+</body>
+</html>

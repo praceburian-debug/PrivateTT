@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <style>
+    body { padding: 10px; }
+    input { width: 100%; margin-bottom: 10px; }
+    button { width: 100%; }
+  </style>
+</head>
+<body>
+  <label for="time-input">Zadejte čas (v hodinách):</label>
+  <input type="number" id="time-input" placeholder="např. 2.5" step="0.5" min="0">
+  <button id="save-btn" class="mod-primary">Uložit čas</button>
+
+  <script>
+    var t = TrelloPowerUp.iframe();
+
+    // Při načtení zobrazíme aktuálně uloženou hodnotu
+    t.get('card', 'shared', 'trackedTime')
+      .then(function(savedTime) {
+        if (savedTime) {
+          document.getElementById('time-input').value = savedTime;
+        }
+      });
+
+    // Logika tlačítka pro uložení
+    document.getElementById('save-btn').addEventListener('click', function() {
+      var newTime = document.getElementById('time-input').value;
+
+      return t.set('card', 'shared', 'trackedTime', newTime)
+        .then(function() {
+          // Zavře okno nebo aktualizuje badge
+          t.closePopup(); 
+        })
+        .catch(function(err) {
+          console.error("Chyba při ukládání:", err);
+        });
+    });
+  </script>
+</body>
+</html>

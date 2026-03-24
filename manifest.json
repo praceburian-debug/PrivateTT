@@ -1,0 +1,12 @@
+{
+  "name": "Private Time Tracker",
+  "details": "Zobrazí trackovaný čas pouze vybraným uživatelům.",
+  "icon": {
+    "url": "./icon.png"
+  },
+  "capabilities": [
+    "card-badges",
+    "card-back-section"
+  ],
+  "connectorUrl": "./index.html"
+}
