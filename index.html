@@ -6,10 +6,10 @@
 </head>
 <body>
   <script>
-    // Zadej své ID, abys měl k Power-Upu přístup vždy jako správce
-    const ADMIN_ID = 'TVOJE_ID_TADY'; 
+    // Tvůj unikátní identifikátor (Admin)
+    const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
 
-    // Pomocná funkce pro formátování na H:MM (shodná se section.html)
+    // Pomocná funkce pro formátování na H:MM
     function formatToHHMM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
@@ -17,31 +17,29 @@
     }
 
     var t = TrelloPowerUp.initialize({
+      // 1. Zobrazení celkového času na přední straně karty
       'card-badges': function(t, options) {
-        // Načteme seznam povolených uživatelů a data logů
         return Promise.all([
           t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
           t.get('card', 'shared', 'workLogs', {})
         ]).then(function(res) {
-          var allowedUsers = res[0];
-          var allLogs = res[1];
+          var allowedUsers = res[0] || [ADMIN_ID];
+          var allLogs = res[1] || {};
           var me = t.getContext().member;
 
-          // Pokud aktuální uživatel není na whitelistu, neukážeme mu nic
+          // Pokud aktuální uživatel není na whitelistu, badge mu úplně skryjeme
           if (!allowedUsers.includes(me)) return [];
 
           var grandTotalSeconds = 0;
           var someoneIsActive = false;
 
-          // Počítáme celkový čas pouze pro lidi, kteří jsou v povoleném seznamu
+          // Sčítáme čas pouze od povolených uživatelů
           allowedUsers.forEach(function(userId) {
             var uData = allLogs[userId];
             if (uData) {
-              // Přičteme hotové logy
               if (uData.logs) {
-                grandTotalSeconds += uData.logs.reduce((sum, log) => sum + log.duration, 0);
+                grandTotalSeconds += uData.logs.reduce((sum, log) => sum + (log.duration || 0), 0);
               }
-              // Přičteme aktuálně běžící čas
               if (uData.activeStart) {
                 grandTotalSeconds += Math.floor((Date.now() - uData.activeStart) / 1000);
                 someoneIsActive = true;
@@ -49,20 +47,23 @@
             }
           });
 
+          // Pokud není nic naměřeno, neukazujeme zbytečně prázdný badge
           if (grandTotalSeconds === 0 && !someoneIsActive) return [];
 
           return [{
-            text: formatToHHMM(grandTotalSeconds) + ' celkem',
-            color: someoneIsActive ? 'green' : 'blue'
+            text: formatToHHMM(grandTotalSeconds),
+            color: someoneIsActive ? 'green' : 'blue' // Zelená pokud někdo právě měří
           }];
         });
       },
+
+      // 2. Definice sekce na zadní straně karty
       'card-back-section': function(t, options) {
         return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID])
           .then(function(allowedUsers) {
             var me = t.getContext().member;
             
-            // Sekci na zadní straně zobrazíme jen povoleným uživatelům
+            // Sekci zobrazíme jen těm, kdo jsou na seznamu (nebo tobě)
             if (!allowedUsers.includes(me)) return null;
 
             return {
@@ -71,7 +72,7 @@
               content: {
                 type: 'iframe',
                 url: t.signUrl('./section.html'),
-                height: 350 
+                height: 400 // Výška okna Power-Upu
               }
             };
           });
