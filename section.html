@@ -4,53 +4,53 @@
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-    body { padding: 10px; font-family: sans-serif; color: var(--ds-text, #172b4d); }
-    .my-timer-card { background: var(--ds-background-neutral, #f4f5f7); padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--ds-border, #ccc); }
-    .user-timer { font-size: 28px; font-weight: bold; margin-bottom: 10px; font-family: monospace; }
+    body { padding: 10px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
+    .my-timer-card { background: var(--ds-background-neutral, #f4f5f7); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--ds-border, #ccc); text-align: center; }
+    .user-timer { font-size: 32px; font-weight: bold; margin-bottom: 10px; font-family: monospace; }
+    
     .user-row { margin-bottom: 12px; border-bottom: 1px solid var(--ds-border, #ddd); padding-bottom: 8px; }
-    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px; }
-    .avatar { width: 26px; height: 26px; border-radius: 50%; margin-right: 10px; background: #0079bf; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
-    .logs-container { display: none; margin-top: 8px; font-size: 12px; background: var(--ds-background-neutral-subtle, #f4f5f7); padding: 8px; border-radius: 5px; }
+    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 5px; border-radius: 4px; }
+    .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
+    .user-info { display: flex; align-items: center; }
+    .avatar { width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; background: #0079bf; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
+    
+    .logs-container { display: none; margin-top: 8px; font-size: 12px; background: var(--ds-background-neutral-subtle, #f4f5f7); padding: 10px; border-radius: 5px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #ccc; }
-    .admin-panel { margin-top: 30px; padding: 10px; border: 1px dashed #f2d600; background: #fff9ce; border-radius: 8px; color: #333; }
-    .btn-access { padding: 4px 10px; font-size: 11px; cursor: pointer; border-radius: 3px; border: 1px solid #ccc; }
+    
+    .log-controls { display: flex; gap: 5px; }
+    .log-controls button { padding: 2px 8px; font-size: 11px; cursor: pointer; border-radius: 3px; border: 1px solid #ccc; background: white; }
+    .btn-del { color: #eb5a46; border-color: #eb5a46 !important; }
+
+    .admin-panel { margin-top: 30px; padding: 12px; border: 1px dashed #f2d600; background: #fff9ce; border-radius: 8px; color: #333; }
+    .admin-panel h4 { margin: 0 0 10px 0; font-size: 13px; color: #856404; text-transform: uppercase; }
+    .member-select-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.7); border-radius: 4px; }
+    .btn-access { padding: 4px 12px; font-size: 11px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white; font-weight: bold; }
     .btn-active { background: #61bd4f; color: white; border: none; }
+    
+    button.mod-primary { width: 100%; padding: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <div id="error-msg" style="display:none; color:red; padding:10px; border:1px solid red; margin-bottom:10px; font-size:12px;"></div>
-
   <div class="my-timer-card">
     <div id="my-display" class="user-timer">00:00:00</div>
-    <button id="start-btn" class="mod-primary" style="width:100%">Spustit měření</button>
-    <button id="stop-btn" style="display:none; width:100%; background:#eb5a46; color:white; border:none; padding:8px; font-weight:bold; cursor:pointer;">Zastavit</button>
+    <button id="start-btn" class="mod-primary">SPUSTIT MĚŘENÍ</button>
+    <button id="stop-btn" style="display:none; width:100%; background:#eb5a46; color:white; border:none; padding:10px; font-weight:bold; border-radius:3px; cursor:pointer;">ZASTAVIT A ULOŽIT</button>
   </div>
 
   <div id="users-list"></div>
 
   <div id="admin-section" style="display:none;" class="admin-panel">
-    <h4>Admin: Správa oprávnění</h4>
+    <h4>Správa oprávnění (Admin)</h4>
     <div id="members-to-authorize"></div>
   </div>
 
   <script>
-    // --- KONFIGURACE ---
-    const ADMIN_ID = 'TVOJE_SKUTECNE_ID'; // <--- SEM VLOŽ SVÉ ID
-    
+    const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; // Tvoje ID vloženo napevno
     var t = TrelloPowerUp.iframe();
-    var me = t.getContext().member;
     var timerInterval;
 
-    if (ADMIN_ID === '651e8ba7f2ed2f797856dfed') {
-      document.getElementById('error-msg').style.display = 'block';
-      document.getElementById('error-msg').textContent = "CHYBA: V souboru section.html není nastaveno ADMIN_ID!";
-    }
-
-    function fTimeFull(s) { 
-      return new Date(s * 1000).toISOString().substr(11, 8); 
-    }
-
+    function fTimeFull(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
     function formatToHHMM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
@@ -58,18 +58,20 @@
     }
 
     function updateUI() {
+      var me = t.getContext().member;
+
       return Promise.all([
         t.get('card', 'shared', 'workLogs', {}),
         t.card('members'),
         t.get('card', 'shared', 'allowedUsers', [ADMIN_ID])
       ]).then(function(res) {
         var allLogs = res[0] || {};
-        var cardMembers = (res[1] && res[1].members) ? res[1].members : [];
+        var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
-        
+
         // 1. Můj timer
         var myData = allLogs[me] || { activeStart: null, logs: [] };
-        var myStoredTotal = (myData.logs || []).reduce((s,l) => s + l.duration, 0);
+        var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
 
         if (myData.activeStart) {
           document.getElementById('start-btn').style.display = 'none';
@@ -86,13 +88,13 @@
           if (timerInterval) clearInterval(timerInterval);
         }
 
-        // 2. Seznam uživatelů
+        // 2. Seznam logů
         var html = '';
         allowedUsers.forEach(userId => {
           var uData = allLogs[userId] || { logs: [] };
           var member = cardMembers.find(m => m.id === userId);
-          var name = member ? member.fullName : "Uživatel (" + userId.substring(0,4) + ")";
-          var totalSec = (uData.logs || []).reduce((sum, l) => sum + l.duration, 0);
+          var name = member ? member.fullName : "Uživatel";
+          var totalSec = (uData.logs || []).reduce((sum, l) => sum + (l.duration || 0), 0);
           if (uData.activeStart) totalSec += Math.floor((Date.now() - uData.activeStart) / 1000);
 
           html += `
@@ -102,35 +104,46 @@
                   <div class="avatar">${member ? member.initials : '?'}</div>
                   <span><strong>${name}</strong> ${uData.activeStart ? '🟢' : ''}</span>
                 </div>
-                <span>${formatToHHMM(totalSec)} ▾</span>
+                <span><strong>${formatToHHMM(totalSec)}</strong> ▾</span>
               </div>
               <div class="logs-container" id="logs-${userId}">
                 ${(uData.logs || []).map((log, idx) => `
                   <div class="log-item">
-                    <span>${new Date(log.date).toLocaleDateString()}: ${formatToHHMM(log.duration)}</span>
-                    ${userId === me ? `<button onclick="editLog(${idx})">✎</button>` : ''}
+                    <span>${new Date(log.date).toLocaleDateString()}: <strong>${formatToHHMM(log.duration)}</strong></span>
+                    ${userId === me ? `
+                      <div class="log-controls">
+                        <button onclick="editLog(${idx})">✎</button>
+                        <button class="btn-del" onclick="deleteLog(${idx})">✕</button>
+                      </div>
+                    ` : ''}
                   </div>
-                `).join('') || 'Žádná historie'}
+                `).join('') || '<div style="padding:5px;opacity:0.5">Žádná historie</div>'}
               </div>
             </div>`;
         });
         document.getElementById('users-list').innerHTML = html;
 
+        // 3. Admin Panel
         if (me === ADMIN_ID) {
           document.getElementById('admin-section').style.display = 'block';
           var adminHtml = '';
           cardMembers.forEach(m => {
             var isAllowed = allowedUsers.includes(m.id);
-            adminHtml += `<div class="member-select-row"><span>${m.fullName}</span><button class="btn-access ${isAllowed ? 'btn-active' : ''}" onclick="toggleAccess('${m.id}')">${isAllowed ? 'Ano' : 'Ne'}</button></div>`;
+            adminHtml += `
+              <div class="member-select-row">
+                <span>${m.fullName}</span>
+                <button class="btn-access ${isAllowed ? 'btn-active' : ''}" onclick="toggleAccess('${m.id}')">
+                  ${isAllowed ? 'Povolen ✓' : 'Nepovolen'}
+                </button>
+              </div>`;
           });
           document.getElementById('members-to-authorize').innerHTML = adminHtml;
         }
-      }).catch(err => {
-        console.error("Chyba updateUI:", err);
       });
     }
 
     document.getElementById('start-btn').onclick = function() {
+      var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs', {}).then(data => {
         if (!data[me]) data[me] = { activeStart: null, logs: [] };
         data[me].activeStart = Date.now();
@@ -139,6 +152,7 @@
     };
 
     document.getElementById('stop-btn').onclick = function() {
+      var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs', {}).then(data => {
         var duration = Math.floor((Date.now() - data[me].activeStart) / 1000);
         if (!data[me].logs) data[me].logs = [];
@@ -148,16 +162,41 @@
       }).then(updateUI);
     };
 
-    window.toggleAccess = (uid) => {
+    window.editLog = function(idx) {
+      var me = t.getContext().member;
+      var newHours = prompt("Zadej nový čas (v hodinách, např. 1.5):");
+      if (newHours !== null && !isNaN(parseFloat(newHours))) {
+        t.get('card', 'shared', 'workLogs').then(data => {
+          data[me].logs[idx].duration = Math.round(parseFloat(newHours) * 3600);
+          return t.set('card', 'shared', 'workLogs', data);
+        }).then(updateUI);
+      }
+    };
+
+    window.deleteLog = function(idx) {
+      var me = t.getContext().member;
+      if (confirm("Smazat tento záznam?")) {
+        t.get('card', 'shared', 'workLogs').then(data => {
+          data[me].logs.splice(idx, 1);
+          return t.set('card', 'shared', 'workLogs', data);
+        }).then(updateUI);
+      }
+    };
+
+    window.toggleAccess = function(uid) {
       t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(allowed => {
-        allowed = allowed.includes(uid) ? allowed.filter(id => id !== uid) : [...allowed, uid];
+        if (allowed.includes(uid)) {
+          if (uid !== ADMIN_ID) allowed = allowed.filter(id => id !== uid);
+        } else {
+          allowed.push(uid);
+        }
         return t.set('card', 'shared', 'allowedUsers', allowed);
       }).then(updateUI);
     };
 
-    window.toggleLogs = (id) => {
+    window.toggleLogs = function(id) {
       var el = document.getElementById('logs-' + id);
-      if (el) el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     };
 
     updateUI();
