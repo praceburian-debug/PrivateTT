@@ -13,7 +13,10 @@
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 5px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     .user-info { display: flex; align-items: center; }
-    .avatar { width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; background: #0079bf; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
+    
+    /* Styl pro avatara (obrázek i iniciály) */
+    .avatar { width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; background: #0079bf; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; overflow: hidden; border: 1px solid rgba(0,0,0,0.1); }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
     
     .logs-container { display: none; margin-top: 8px; font-size: 12px; background: var(--ds-background-neutral-subtle, #f4f5f7); padding: 10px; border-radius: 5px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #ccc; }
@@ -97,6 +100,12 @@
           var uData = allLogs[userId] || { logs: [] };
           var member = cardMembers.find(m => m.id === userId);
           var name = member ? member.fullName : "Uživatel";
+          
+          // Logika pro avatar (fotka vs iniciály)
+          var avatarContent = (member && member.avatarUrl) 
+            ? `<img src="${member.avatarUrl}/30.png" alt="${member.initials}">` 
+            : (member ? member.initials : '?');
+
           var totalSec = (uData.logs || []).reduce((sum, l) => sum + (l.duration || 0), 0);
           if (uData.activeStart) totalSec += Math.floor((Date.now() - uData.activeStart) / 1000);
 
@@ -104,7 +113,7 @@
             <div class="user-row">
               <div class="user-header" onclick="toggleLogs('${userId}')">
                 <div class="user-info">
-                  <div class="avatar">${member ? member.initials : '?'}</div>
+                  <div class="avatar">${avatarContent}</div>
                   <span><strong>${name}</strong> ${uData.activeStart ? '🟢' : ''}</span>
                 </div>
                 <span><strong>${formatToHHMM(totalSec)}</strong> ▾</span>
