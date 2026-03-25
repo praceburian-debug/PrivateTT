@@ -99,18 +99,38 @@
           }
           grandTotalSeconds += currentTotal;
 
-          var name = member ? member.fullName : "Uživatel " + userId.substring(0,4);
-          var avatarUrl = member && member.avatar ? member.avatar + "/30.png" : "https://trello-members.s3.amazonaws.com/default/30.png";
+         // Najdeme jméno a fotku
+var name = member ? member.fullName : "Uživatel " + userId.substring(0,4);
+var initials = member ? member.initials : "??";
 
-          listHtml += `
-            <div class="user-row">
-              <div class="user-info">
-                <img src="${avatarUrl}" class="avatar" alt="avatar">
-                <span class="user-name">${name} ${isActive ? '<span class="active-dot"></span>' : ''}</span>
-              </div>
-              <span class="user-time-val">${(currentTotal / 3600).toFixed(2)} h</span>
-            </div>
-          `;
+// Oprava logiky pro avatar
+var avatarUrl = null;
+if (member && member.avatar && member.avatar !== "null") {
+    // Pokud je avatar jen hash, doplníme Trello URL, pokud je to celá URL, necháme ji
+    avatarUrl = member.avatar.indexOf('http') === 0 ? member.avatar : "https://trello-avatars.s3.amazonaws.com/" + member.avatar + "/30.png";
+} else if (member && member.avatarUrl) {
+    avatarUrl = member.avatarUrl + "/30.png";
+}
+
+// Pokud fotka existuje, ukážeme ji, jinak ukážeme iniciály v kroužku
+var avatarHtml = avatarUrl 
+    ? `<img src="${avatarUrl}" class="avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` 
+    : '';
+
+var initialsHtml = `<div class="avatar" style="display:${avatarUrl ? 'none' : 'flex'}; align-items:center; justify-content:center; background:var(--ds-background-accent-blue-subtler, #0079bf); color:white; font-size:10px;">${initials}</div>`;
+
+listHtml += `
+  <div class="user-row">
+    <div class="user-info">
+      <div style="position:relative; width:24px; height:24px; margin-right:10px;">
+        ${avatarHtml}
+        ${initialsHtml}
+      </div>
+      <span class="user-name">${name} ${isActive ? '<span class="active-dot"></span>' : ''}</span>
+    </div>
+    <span class="user-time-val">${(currentTotal / 3600).toFixed(2)} h</span>
+  </div>
+`;
         });
 
         document.getElementById('users-list').innerHTML = listHtml || '<div style="font-size:12px; opacity:0.6;">Zatím žádné záznamy</div>';
