@@ -12,11 +12,8 @@
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 5px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     .user-info { display: flex; align-items: center; }
-    
-    .avatar { width: 30px; height: 30px; border-radius: 50%; margin-right: 12px; background: #dfe1e6; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.05); }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; margin-right: 12px; background: #dfe1e6; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
     .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .avatar-init { font-size: 11px; font-weight: bold; color: #172b4d; text-transform: uppercase; }
-
     .logs-container { display: none; margin-top: 8px; font-size: 12px; background: var(--ds-background-neutral-subtle, #f4f5f7); padding: 10px; border-radius: 5px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #ccc; }
     .log-controls { display: flex; gap: 5px; }
@@ -45,7 +42,6 @@
   <script>
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
     var t = TrelloPowerUp.iframe();
-    var timerInterval;
 
     function fTimeFull(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
     function formatToHHMM(seconds) {
@@ -59,55 +55,50 @@
       
       return Promise.all([
         t.get('card', 'shared', 'workLogs', {}),
-        t.board('members'), // Získáme členy z celého boardu (spolehlivější pro avatary)
+        t.card('members'),
         t.get('card', 'shared', 'allowedUsers', [ADMIN_ID])
       ]).then(function(res) {
         var allLogs = res[0] || {};
-        var boardMembers = res[1] || [];
+        var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
 
         document.getElementById('status').textContent = "Uživatel: " + me;
 
+        // Timer sekce
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
-
         if (myData.activeStart) {
           document.getElementById('start-btn').style.display = 'none';
           document.getElementById('stop-btn').style.display = 'block';
-          if (timerInterval) clearInterval(timerInterval);
-          timerInterval = setInterval(() => {
-            var sessionSeconds = Math.floor((Date.now() - myData.activeStart) / 1000);
-            document.getElementById('my-display').textContent = fTimeFull(myStoredTotal + sessionSeconds);
-          }, 1000);
+          // Timer běží v reálném čase bez nutnosti intervalu v proměnné pro UI
+          var sessionSeconds = Math.floor((Date.now() - myData.activeStart) / 1000);
+          document.getElementById('my-display').textContent = fTimeFull(myStoredTotal + sessionSeconds);
         } else {
           document.getElementById('start-btn').style.display = 'block';
           document.getElementById('stop-btn').style.display = 'none';
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
-          if (timerInterval) clearInterval(timerInterval);
         }
 
+        // Seznam uživatelů
         var html = '';
         allowedUsers.forEach(userId => {
-          var uData = allLogs[userId] || { logs: [] };
-          var member = boardMembers.find(m => m.id === userId);
+          var member = cardMembers.find(m => m.id === userId);
           if (!member) return;
 
+          var uData = allLogs[userId] || { logs: [] };
           var totalSec = (uData.logs || []).reduce((sum, l) => sum + (l.duration || 0), 0);
           if (uData.activeStart) totalSec += Math.floor((Date.now() - uData.activeStart) / 1000);
 
-          // LOGIKA PRO AVATAR - Zkoušíme avatarUrl nebo složení z ID
-          var avatarImg = '';
-          if (member.avatarUrl) {
-            avatarImg = `<img src="${member.avatarUrl}/50.png" onerror="this.parentElement.innerHTML='<span class=\"avatar-init\">${member.initials}</span>'">`;
-          } else {
-            avatarImg = `<span class="avatar-init">${member.initials}</span>`;
-          }
+          // POUŽITÍ PŘÍMÉHO AVATARURL - toto byla funkční verze
+          var avatarHtml = member.avatarUrl 
+            ? `<img src="${member.avatarUrl}/50.png">` 
+            : `<span style="font-size:10px; font-weight:bold;">${member.initials}</span>`;
 
           html += `
             <div class="user-row">
               <div class="user-header" onclick="toggleLogs('${userId}')">
                 <div class="user-info">
-                  <div class="avatar">${avatarImg}</div>
+                  <div class="avatar">${avatarHtml}</div>
                   <span><strong>${member.fullName}</strong> ${uData.activeStart ? '🟢' : ''}</span>
                 </div>
                 <span><strong>${formatToHHMM(totalSec)}</strong> ▾</span>
@@ -116,23 +107,19 @@
                 ${(uData.logs || []).map((log, idx) => `
                   <div class="log-item">
                     <span>${new Date(log.date).toLocaleDateString()}: <strong>${formatToHHMM(log.duration)}</strong></span>
-                    ${userId === me ? `
-                      <div class="log-controls">
-                        <button onclick="editLog(${idx})">✎</button>
-                        <button class="btn-del" onclick="deleteLog(${idx})">✕</button>
-                      </div>
-                    ` : ''}
+                    ${userId === me ? `<div class="log-controls"><button onclick="editLog(${idx})">✎</button><button class="btn-del" onclick="deleteLog(${idx})">✕</button></div>` : ''}
                   </div>
-                `).join('') || '<div style="padding:5px;opacity:0.5">Žádná historie</div>'}
+                `).join('') || '<div style="padding:5px;opacity:0.5">Bez historie</div>'}
               </div>
             </div>`;
         });
         document.getElementById('users-list').innerHTML = html;
 
+        // Admin
         if (me === ADMIN_ID) {
           document.getElementById('admin-section').style.display = 'block';
           var adminHtml = '';
-          boardMembers.forEach(m => {
+          cardMembers.forEach(m => {
             var isAllowed = allowedUsers.includes(m.id);
             adminHtml += `<div class="member-select-row"><span>${m.fullName}</span><button class="btn-access ${isAllowed ? 'btn-active' : ''}" onclick="toggleAccess('${m.id}')">${isAllowed ? 'Povolen' : 'Nepovolen'}</button></div>`;
           });
@@ -141,7 +128,9 @@
       });
     }
 
-    // Ostatní funkce zůstávají stejné...
+    // Interval pro aktualizaci běžícího času každou vteřinu
+    setInterval(updateUI, 1000);
+
     document.getElementById('start-btn').onclick = function() {
       var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs', {}).then(data => {
@@ -164,7 +153,7 @@
 
     window.editLog = function(idx) {
       var me = t.getContext().member;
-      var h = prompt("Hodin (např. 1.2):");
+      var h = prompt("Hodin:");
       if (h && !isNaN(h)) {
         t.get('card', 'shared', 'workLogs').then(d => {
           d[me].logs[idx].duration = Math.round(h * 3600);
