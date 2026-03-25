@@ -12,7 +12,17 @@
       '62f0c7f59183be0274f01ecc'
     ];
 
-    var t = TrelloPowerUp.initialize({
+  var t = TrelloPowerUp.initialize({
+  // Přidáme inicializační parametr pro autorizaci
+  'app-control': function(t, options) {
+    return {
+      title: 'Konfigurace',
+      content: {
+        type: 'iframe',
+        url: t.signUrl('./index.html')
+      }
+    };
+  },
      'card-badges': function(t, options) {
   return t.get('card', 'shared', 'multiTracking')
     .then(function(allData) {
