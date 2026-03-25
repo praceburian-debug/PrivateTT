@@ -4,30 +4,48 @@
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-    body { padding: 10px; font-family: sans-serif; }
-    .user-timer { font-size: 22px; font-weight: bold; margin-bottom: 5px; color: #9d9d9c; }
-    .label { font-size: 12px; color: #5e6c84; text-transform: uppercase; }
-    button { width: 100%; margin-bottom: 10px; cursor: pointer; font-weight: bold; }
-    .btn-stop { background-color: #eb5a46; color: white; border: none; padding: 8px; }
-    .btn-stop:hover { background-color: #cf513d; }
+    /* Dynamické barvy podle Trella */
+    body { 
+      padding: 10px; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ds-text, #172b4d); /* Černá v light, bílá v dark */
+    }
     
-    .total-sum { margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold; color: #9d9d9c; }
-    .active-list { margin-top: 10px; font-size: 13px; color: #444; background: #f4f5f7; padding: 8px; border-radius: 3px; }
-    .dot { height: 8px; width: 8px; background-color: #61bd4f; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .label { font-size: 12px; color: var(--ds-text-subtle, #5e6c84); text-transform: uppercase; margin-bottom: 4px; }
+    
+    .my-timer-container { margin-bottom: 20px; padding: 10px; background: var(--ds-background-neutral, #f4f5f7); border-radius: 8px; }
+    .user-timer { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+    
+    button { width: 100%; cursor: pointer; font-weight: bold; border-radius: 3px; border: none; padding: 8px; }
+    .btn-stop { background-color: var(--ds-background-danger, #eb5a46); color: white; }
+    .btn-stop:hover { background-color: var(--ds-background-danger-hovered, #cf513d); }
+    
+    .history-section { margin-top: 20px; border-top: 1px solid var(--ds-border, #ddd); padding-top: 15px; }
+    .user-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 4px 0; }
+    .user-info { display: flex; align-items: center; }
+    .avatar { width: 24px; height: 24px; border-radius: 50%; margin-right: 10px; background: #ccc; }
+    .user-name { font-size: 14px; font-weight: 500; }
+    .user-time-val { font-family: monospace; font-weight: bold; font-size: 14px; }
+    
+    .active-dot { height: 8px; width: 8px; background-color: #61bd4f; border-radius: 50%; margin-left: 5px; display: inline-block; }
   </style>
 </head>
 <body>
-  <div class="label">Můj aktuální čas:</div>
-  <div class="user-timer" id="my-display">00:00:00</div>
+
+  <div class="my-timer-container">
+    <div class="label">Můj aktuální čas</div>
+    <div class="user-timer" id="my-display">00:00:00</div>
+    <button id="start-btn" class="mod-primary">Spustit měření</button>
+    <button id="stop-btn" class="btn-stop" style="display:none;">Zastavit a uložit</button>
+  </div>
   
-  <button id="start-btn" class="mod-primary">Spustit měření</button>
-  <button id="stop-btn" class="btn-stop" style="display:none;">Zastavit a uložit</button>
-  
-  <div class="total-sum" id="total-display">Celkem na kartě: 0.00 hod</div>
-  
-  <div id="active-users-container" style="display:none;">
-    <div class="label" style="margin-top:10px;">Právě pracují:</div>
-    <div class="active-list" id="active-list"></div>
+  <div class="history-section">
+    <div class="label">Přehled časů na kartě</div>
+    <div id="users-list"></div>
+    <div class="user-row" style="border-top: 1px dashed var(--ds-border, #ccc); margin-top: 10px; padding-top: 10px;">
+        <span class="user-name">CELKEM</span>
+        <span class="user-time-val" id="grand-total">0.00 hod</span>
+    </div>
   </div>
 
   <script>
@@ -40,7 +58,6 @@
     }
 
     function updateUI() {
-      // Získáme data o časech a zároveň členy karty, abychom mohli ukázat jména (pokud jsou dostupná)
       return Promise.all([
         t.get('card', 'shared', 'multiTracking', {}),
         t.card('members')
@@ -49,7 +66,7 @@
         var cardMembers = results[1].members;
         var myData = allData[me] || { total: 0, start: null };
         
-        // 1. Můj timer
+        // 1. Můj hlavní timer
         if (myData.start) {
           document.getElementById('start-btn').style.display = 'none';
           document.getElementById('stop-btn').style.display = 'block';
@@ -65,36 +82,43 @@
           if (timerInterval) clearInterval(timerInterval);
         }
 
-        // 2. Celkový součet a seznam aktivních
+        // 2. Vykreslení všech uživatelů
+        var listHtml = '';
         var grandTotalSeconds = 0;
-        var activeNames = [];
 
+        // Projdeme všechna data v databázi karty
         Object.keys(allData).forEach(function(userId) {
           var userData = allData[userId];
-          grandTotalSeconds += userData.total;
+          var member = cardMembers.find(m => m.id === userId);
           
+          var currentTotal = userData.total;
+          var isActive = false;
           if (userData.start) {
-            grandTotalSeconds += Math.floor((Date.now() - userData.start) / 1000);
-            // Najdeme jméno uživatele podle ID v členech karty
-            var member = cardMembers.find(m => m.id === userId);
-            activeNames.push(member ? member.fullName : "Neznámý uživatel (" + userId.substring(0,5) + ")");
+            currentTotal += Math.floor((Date.now() - userData.start) / 1000);
+            isActive = true;
           }
+          grandTotalSeconds += currentTotal;
+
+          var name = member ? member.fullName : "Uživatel " + userId.substring(0,4);
+          var avatarUrl = member && member.avatar ? member.avatar + "/30.png" : "https://trello-members.s3.amazonaws.com/default/30.png";
+
+          listHtml += `
+            <div class="user-row">
+              <div class="user-info">
+                <img src="${avatarUrl}" class="avatar" alt="avatar">
+                <span class="user-name">${name} ${isActive ? '<span class="active-dot"></span>' : ''}</span>
+              </div>
+              <span class="user-time-val">${(currentTotal / 3600).toFixed(2)} h</span>
+            </div>
+          `;
         });
 
-        document.getElementById('total-display').textContent = "Celkem na kartě: " + (grandTotalSeconds / 3600).toFixed(2) + " hod";
-
-        // 3. Zobrazení seznamu pracujících
-        var container = document.getElementById('active-users-container');
-        var list = document.getElementById('active-list');
-        if (activeNames.length > 0) {
-          container.style.display = 'block';
-          list.innerHTML = activeNames.map(name => '<div><span class="dot"></span>' + name + '</div>').join('');
-        } else {
-          container.style.display = 'none';
-        }
+        document.getElementById('users-list').innerHTML = listHtml || '<div style="font-size:12px; opacity:0.6;">Zatím žádné záznamy</div>';
+        document.getElementById('grand-total').textContent = (grandTotalSeconds / 3600).toFixed(2) + " hod";
       });
     }
 
+    // Event listenery pro Start/Stop
     document.getElementById('start-btn').addEventListener('click', function() {
       return t.get('card', 'shared', 'multiTracking', {})
         .then(function(allData) {
