@@ -6,58 +6,75 @@
 </head>
 <body>
   <script>
-    // Seznam ID uživatelů, kteří mají Power-Up vidět
-    const ALLOWED_USERS = [
-      '651e8ba7f2ed2f797856dfed',
-      '62f0c7f59183be0274f01ecc'
-    ];
+    // Zadej své ID, abys měl k Power-Upu přístup vždy jako správce
+    const ADMIN_ID = 'TVOJE_ID_TADY'; 
+
+    // Pomocná funkce pro formátování na H:MM (shodná se section.html)
+    function formatToHHMM(seconds) {
+      var h = Math.floor(seconds / 3600);
+      var m = Math.floor((seconds % 3600) / 60);
+      return h + ":" + (m < 10 ? "0" : "") + m;
+    }
 
     var t = TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
-        return t.get('card', 'shared', 'workLogs', {})
-          .then(function(allLogs) {
-            const currentMember = t.getContext().member;
-            
-            // Kontrola přístupu
-            if (!ALLOWED_USERS.includes(currentMember)) return [];
+        // Načteme seznam povolených uživatelů a data logů
+        return Promise.all([
+          t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
+          t.get('card', 'shared', 'workLogs', {})
+        ]).then(function(res) {
+          var allowedUsers = res[0];
+          var allLogs = res[1];
+          var me = t.getContext().member;
 
-            var grandTotalSeconds = 0;
-            var someoneIsActive = false;
+          // Pokud aktuální uživatel není na whitelistu, neukážeme mu nic
+          if (!allowedUsers.includes(me)) return [];
 
-            // Projdeme logy všech uživatelů a sečteme je
-            Object.values(allLogs).forEach(function(uData) {
-              // Sečteme hotové logy
+          var grandTotalSeconds = 0;
+          var someoneIsActive = false;
+
+          // Počítáme celkový čas pouze pro lidi, kteří jsou v povoleném seznamu
+          allowedUsers.forEach(function(userId) {
+            var uData = allLogs[userId];
+            if (uData) {
+              // Přičteme hotové logy
               if (uData.logs) {
                 grandTotalSeconds += uData.logs.reduce((sum, log) => sum + log.duration, 0);
               }
-              // Přičteme případný běžící čas
+              // Přičteme aktuálně běžící čas
               if (uData.activeStart) {
                 grandTotalSeconds += Math.floor((Date.now() - uData.activeStart) / 1000);
                 someoneIsActive = true;
               }
-            });
-
-            if (grandTotalSeconds === 0 && !someoneIsActive) return [];
-
-            return [{
-              text: (grandTotalSeconds / 3600).toFixed(2) + ' hod celkem',
-              color: someoneIsActive ? 'green' : 'blue'
-            }];
+            }
           });
+
+          if (grandTotalSeconds === 0 && !someoneIsActive) return [];
+
+          return [{
+            text: formatToHHMM(grandTotalSeconds) + ' celkem',
+            color: someoneIsActive ? 'green' : 'blue'
+          }];
+        });
       },
       'card-back-section': function(t, options) {
-        const currentMember = t.getContext().member;
-        if (!ALLOWED_USERS.includes(currentMember)) return null;
+        return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID])
+          .then(function(allowedUsers) {
+            var me = t.getContext().member;
+            
+            // Sekci na zadní straně zobrazíme jen povoleným uživatelům
+            if (!allowedUsers.includes(me)) return null;
 
-        return {
-          title: 'Soukromý Time Tracking',
-          icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4fc2-880a-504e0e84429a%2Ficon-gray.svg',
-          content: {
-            type: 'iframe',
-            url: t.signUrl('./section.html'),
-            height: 250 // Trochu jsem zvětšil výšku, aby se tam vešla ta historie
-          }
-        };
+            return {
+              title: 'Soukromý Time Tracking',
+              icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4fc2-880a-504e0e84429a%2Ficon-gray.svg',
+              content: {
+                type: 'iframe',
+                url: t.signUrl('./section.html'),
+                height: 350 
+              }
+            };
+          });
       }
     });
   </script>
