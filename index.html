@@ -13,27 +13,31 @@
     ];
 
     var t = TrelloPowerUp.initialize({
-      'card-badges': function(t, options) {
-        return t.get('card', 'shared', 'trackingData')
-          .then(function(data) {
-            const currentMember = t.getContext().member;
-            
-            // Pokud uživatel není v seznamu nebo nejsou data, neukazuj badge
-            if (!ALLOWED_USERS.includes(currentMember) || !data) {
-              return [];
-            }
+     'card-badges': function(t, options) {
+  return t.get('card', 'shared', 'multiTracking')
+    .then(function(allData) {
+      const currentMember = t.getContext().member;
+      if (!ALLOWED_USERS.includes(currentMember) || !allData) return [];
 
-            let totalSeconds = data.total || 0;
-            if (data.start) {
-              totalSeconds += Math.floor((Date.now() - data.start) / 1000);
-            }
+      var grandTotalSeconds = 0;
+      var someoneIsActive = false;
 
-            return [{
-              text: (totalSeconds / 3600).toFixed(2) + ' hod',
-              color: data.start ? 'green' : 'blue'
-            }];
-          });
-      },
+      Object.values(allData).forEach(function(userData) {
+        grandTotalSeconds += userData.total;
+        if (userData.start) {
+          grandTotalSeconds += Math.floor((Date.now() - userData.start) / 1000);
+          someoneIsActive = true;
+        }
+      });
+
+      if (grandTotalSeconds === 0) return [];
+
+      return [{
+        text: (grandTotalSeconds / 3600).toFixed(2) + ' hod celkem',
+        color: someoneIsActive ? 'green' : 'blue'
+      }];
+    });
+},
       'card-back-section': function(t, options) {
         const currentMember = t.getContext().member;
 
