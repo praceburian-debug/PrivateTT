@@ -6,15 +6,28 @@
 </head>
 <body>
   <script>
+    // SEM VLOŽ ID POVOLENÝCH UŽIVATELŮ
+    const ALLOWED_USERS = [
+      'TVOJE_ID_Z_TRELLO_ME_JSON',
+      'ID_KOLEGY_1'
+    ];
+
     var t = TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
         return t.get('card', 'shared', 'trackingData')
           .then(function(data) {
-            if (!data) return [];
+            const currentMember = t.getContext().member;
+            
+            // Pokud uživatel není v seznamu nebo nejsou data, neukazuj badge
+            if (!ALLOWED_USERS.includes(currentMember) || !data) {
+              return [];
+            }
+
             let totalSeconds = data.total || 0;
             if (data.start) {
               totalSeconds += Math.floor((Date.now() - data.start) / 1000);
             }
+
             return [{
               text: (totalSeconds / 3600).toFixed(2) + ' hod',
               color: data.start ? 'green' : 'blue'
@@ -22,9 +35,15 @@
           });
       },
       'card-back-section': function(t, options) {
+        const currentMember = t.getContext().member;
+
+        // Pokud uživatel není v seznamu, sekce se vůbec nenačte
+        if (!ALLOWED_USERS.includes(currentMember)) {
+          return null;
+        }
+
         return {
           title: 'Soukromý Time Tracking',
-          // Použijeme tuhle konkrétní URL na šedou ikonu hodin
           icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4fc2-880a-504e0e84429a%2Ficon-gray.svg',
           content: {
             type: 'iframe',
