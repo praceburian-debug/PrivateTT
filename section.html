@@ -5,18 +5,30 @@
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
     body { padding: 10px; font-family: sans-serif; }
-    .user-timer { font-size: 20px; font-weight: bold; margin-bottom: 5px; color: #0079bf; }
-    .total-sum { margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold; color: #5e6c84; }
-    button { width: 100%; margin-bottom: 5px; cursor: pointer; }
-    .btn-stop { background-color: #eb5a46; color: white; }
+    .user-timer { font-size: 22px; font-weight: bold; margin-bottom: 5px; color: #0079bf; }
+    .label { font-size: 12px; color: #5e6c84; text-transform: uppercase; }
+    button { width: 100%; margin-bottom: 10px; cursor: pointer; font-weight: bold; }
+    .btn-stop { background-color: #eb5a46; color: white; border: none; padding: 8px; }
+    .btn-stop:hover { background-color: #cf513d; }
+    
+    .total-sum { margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold; color: #172b4d; }
+    .active-list { margin-top: 10px; font-size: 13px; color: #444; background: #f4f5f7; padding: 8px; border-radius: 3px; }
+    .dot { height: 8px; width: 8px; background-color: #61bd4f; border-radius: 50%; display: inline-block; margin-right: 5px; }
   </style>
 </head>
 <body>
+  <div class="label">Můj aktuální čas:</div>
   <div class="user-timer" id="my-display">00:00:00</div>
-  <button id="start-btn" class="mod-primary">Spustit můj čas</button>
-  <button id="stop-btn" class="btn-stop" style="display:none;">Zastavit můj čas</button>
   
-  <div class="total-sum" id="total-display">Celkový sumář: 0.00 hod</div>
+  <button id="start-btn" class="mod-primary">Spustit měření</button>
+  <button id="stop-btn" class="btn-stop" style="display:none;">Zastavit a uložit</button>
+  
+  <div class="total-sum" id="total-display">Celkem na kartě: 0.00 hod</div>
+  
+  <div id="active-users-container" style="display:none;">
+    <div class="label" style="margin-top:10px;">Právě pracují:</div>
+    <div class="active-list" id="active-list"></div>
+  </div>
 
   <script>
     var t = TrelloPowerUp.iframe();
@@ -28,37 +40,59 @@
     }
 
     function updateUI() {
-      // Data teď ukládáme jako objekt: { "userID": {total: X, start: Y}, "userID2": ... }
-      return t.get('card', 'shared', 'multiTracking', {})
-        .then(function(allData) {
-          var myData = allData[me] || { total: 0, start: null };
-          
-          // 1. Aktualizace mého běžícího času
-          if (myData.start) {
-            document.getElementById('start-btn').style.display = 'none';
-            document.getElementById('stop-btn').style.display = 'block';
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(function() {
-              var elapsed = Math.floor((Date.now() - myData.start) / 1000);
-              document.getElementById('my-display').textContent = formatTime(myData.total + elapsed);
-            }, 1000);
-          } else {
-            document.getElementById('start-btn').style.display = 'block';
-            document.getElementById('stop-btn').style.display = 'none';
-            document.getElementById('my-display').textContent = formatTime(myData.total);
-            if (timerInterval) clearInterval(timerInterval);
-          }
+      // Získáme data o časech a zároveň členy karty, abychom mohli ukázat jména (pokud jsou dostupná)
+      return Promise.all([
+        t.get('card', 'shared', 'multiTracking', {}),
+        t.card('members')
+      ]).then(function(results) {
+        var allData = results[0];
+        var cardMembers = results[1].members;
+        var myData = allData[me] || { total: 0, start: null };
+        
+        // 1. Můj timer
+        if (myData.start) {
+          document.getElementById('start-btn').style.display = 'none';
+          document.getElementById('stop-btn').style.display = 'block';
+          if (timerInterval) clearInterval(timerInterval);
+          timerInterval = setInterval(function() {
+            var elapsed = Math.floor((Date.now() - myData.start) / 1000);
+            document.getElementById('my-display').textContent = formatTime(myData.total + elapsed);
+          }, 1000);
+        } else {
+          document.getElementById('start-btn').style.display = 'block';
+          document.getElementById('stop-btn').style.display = 'none';
+          document.getElementById('my-display').textContent = formatTime(myData.total);
+          if (timerInterval) clearInterval(timerInterval);
+        }
 
-          // 2. Výpočet celkového součtu všech uživatelů
-          var grandTotalSeconds = 0;
-          Object.values(allData).forEach(function(userData) {
-            grandTotalSeconds += userData.total;
-            if (userData.start) {
-              grandTotalSeconds += Math.floor((Date.now() - userData.start) / 1000);
-            }
-          });
-          document.getElementById('total-display').textContent = "Celkový sumář: " + (grandTotalSeconds / 3600).toFixed(2) + " hod";
+        // 2. Celkový součet a seznam aktivních
+        var grandTotalSeconds = 0;
+        var activeNames = [];
+
+        Object.keys(allData).forEach(function(userId) {
+          var userData = allData[userId];
+          grandTotalSeconds += userData.total;
+          
+          if (userData.start) {
+            grandTotalSeconds += Math.floor((Date.now() - userData.start) / 1000);
+            // Najdeme jméno uživatele podle ID v členech karty
+            var member = cardMembers.find(m => m.id === userId);
+            activeNames.push(member ? member.fullName : "Neznámý uživatel (" + userId.substring(0,5) + ")");
+          }
         });
+
+        document.getElementById('total-display').textContent = "Celkem na kartě: " + (grandTotalSeconds / 3600).toFixed(2) + " hod";
+
+        // 3. Zobrazení seznamu pracujících
+        var container = document.getElementById('active-users-container');
+        var list = document.getElementById('active-list');
+        if (activeNames.length > 0) {
+          container.style.display = 'block';
+          list.innerHTML = activeNames.map(name => '<div><span class="dot"></span>' + name + '</div>').join('');
+        } else {
+          container.style.display = 'none';
+        }
+      });
     }
 
     document.getElementById('start-btn').addEventListener('click', function() {
