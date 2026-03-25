@@ -6,55 +6,48 @@
 </head>
 <body>
   <script>
-    // SEM VLOŽ ID POVOLENÝCH UŽIVATELŮ
+    // Seznam ID uživatelů, kteří mají Power-Up vidět
     const ALLOWED_USERS = [
       '651e8ba7f2ed2f797856dfed',
       '62f0c7f59183be0274f01ecc'
     ];
 
-  var t = TrelloPowerUp.initialize({
-  // Přidáme inicializační parametr pro autorizaci
-  'app-control': function(t, options) {
-    return {
-      title: 'Konfigurace',
-      content: {
-        type: 'iframe',
-        url: t.signUrl('./index.html')
-      }
-    };
-  },
-     'card-badges': function(t, options) {
-  return t.get('card', 'shared', 'multiTracking')
-    .then(function(allData) {
-      const currentMember = t.getContext().member;
-      if (!ALLOWED_USERS.includes(currentMember) || !allData) return [];
+    var t = TrelloPowerUp.initialize({
+      'card-badges': function(t, options) {
+        return t.get('card', 'shared', 'workLogs', {})
+          .then(function(allLogs) {
+            const currentMember = t.getContext().member;
+            
+            // Kontrola přístupu
+            if (!ALLOWED_USERS.includes(currentMember)) return [];
 
-      var grandTotalSeconds = 0;
-      var someoneIsActive = false;
+            var grandTotalSeconds = 0;
+            var someoneIsActive = false;
 
-      Object.values(allData).forEach(function(userData) {
-        grandTotalSeconds += userData.total;
-        if (userData.start) {
-          grandTotalSeconds += Math.floor((Date.now() - userData.start) / 1000);
-          someoneIsActive = true;
-        }
-      });
+            // Projdeme logy všech uživatelů a sečteme je
+            Object.values(allLogs).forEach(function(uData) {
+              // Sečteme hotové logy
+              if (uData.logs) {
+                grandTotalSeconds += uData.logs.reduce((sum, log) => sum + log.duration, 0);
+              }
+              // Přičteme případný běžící čas
+              if (uData.activeStart) {
+                grandTotalSeconds += Math.floor((Date.now() - uData.activeStart) / 1000);
+                someoneIsActive = true;
+              }
+            });
 
-      if (grandTotalSeconds === 0) return [];
+            if (grandTotalSeconds === 0 && !someoneIsActive) return [];
 
-      return [{
-        text: (grandTotalSeconds / 3600).toFixed(2) + ' hod celkem',
-        color: someoneIsActive ? 'green' : 'blue'
-      }];
-    });
-},
+            return [{
+              text: (grandTotalSeconds / 3600).toFixed(2) + ' hod celkem',
+              color: someoneIsActive ? 'green' : 'blue'
+            }];
+          });
+      },
       'card-back-section': function(t, options) {
         const currentMember = t.getContext().member;
-
-        // Pokud uživatel není v seznamu, sekce se vůbec nenačte
-        if (!ALLOWED_USERS.includes(currentMember)) {
-          return null;
-        }
+        if (!ALLOWED_USERS.includes(currentMember)) return null;
 
         return {
           title: 'Soukromý Time Tracking',
@@ -62,7 +55,7 @@
           content: {
             type: 'iframe',
             url: t.signUrl('./section.html'),
-            height: 180
+            height: 250 // Trochu jsem zvětšil výšku, aby se tam vešla ta historie
           }
         };
       }
