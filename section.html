@@ -5,83 +5,83 @@
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
     body { padding: 10px; font-family: sans-serif; }
-    .timer-display { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #172b4d; }
+    .user-timer { font-size: 20px; font-weight: bold; margin-bottom: 5px; color: #0079bf; }
+    .total-sum { margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold; color: #5e6c84; }
     button { width: 100%; margin-bottom: 5px; cursor: pointer; }
     .btn-stop { background-color: #eb5a46; color: white; }
-    .btn-stop:hover { background-color: #cf513d; }
   </style>
 </head>
 <body>
-  <div class="timer-display" id="display">00:00:00</div>
+  <div class="user-timer" id="my-display">00:00:00</div>
+  <button id="start-btn" class="mod-primary">Spustit můj čas</button>
+  <button id="stop-btn" class="btn-stop" style="display:none;">Zastavit můj čas</button>
   
-  <button id="start-btn" class="mod-primary">Start</button>
-  <button id="stop-btn" class="btn-stop" style="display:none;">Stop</button>
-  <button id="reset-btn" class="mod-quiet">Resetovat vše</button>
+  <div class="total-sum" id="total-display">Celkový sumář: 0.00 hod</div>
 
   <script>
     var t = TrelloPowerUp.iframe();
     var timerInterval;
+    var me = t.getContext().member;
 
-    // Pomocná funkce pro formátování sekund na HH:MM:SS
     function formatTime(seconds) {
       return new Date(seconds * 1000).toISOString().substr(11, 8);
     }
 
     function updateUI() {
-      return t.get('card', 'shared', 'trackingData', { total: 0, start: null })
-        .then(function(data) {
-          if (data.start) {
-            // Časovač běží
+      // Data teď ukládáme jako objekt: { "userID": {total: X, start: Y}, "userID2": ... }
+      return t.get('card', 'shared', 'multiTracking', {})
+        .then(function(allData) {
+          var myData = allData[me] || { total: 0, start: null };
+          
+          // 1. Aktualizace mého běžícího času
+          if (myData.start) {
             document.getElementById('start-btn').style.display = 'none';
             document.getElementById('stop-btn').style.display = 'block';
-            
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(function() {
-              var elapsedSinceStart = Math.floor((Date.now() - data.start) / 1000);
-              document.getElementById('display').textContent = formatTime(data.total + elapsedSinceStart);
+              var elapsed = Math.floor((Date.now() - myData.start) / 1000);
+              document.getElementById('my-display').textContent = formatTime(myData.total + elapsed);
             }, 1000);
           } else {
-            // Časovač stojí
             document.getElementById('start-btn').style.display = 'block';
             document.getElementById('stop-btn').style.display = 'none';
-            document.getElementById('display').textContent = formatTime(data.total);
+            document.getElementById('my-display').textContent = formatTime(myData.total);
             if (timerInterval) clearInterval(timerInterval);
           }
+
+          // 2. Výpočet celkového součtu všech uživatelů
+          var grandTotalSeconds = 0;
+          Object.values(allData).forEach(function(userData) {
+            grandTotalSeconds += userData.total;
+            if (userData.start) {
+              grandTotalSeconds += Math.floor((Date.now() - userData.start) / 1000);
+            }
+          });
+          document.getElementById('total-display').textContent = "Celkový sumář: " + (grandTotalSeconds / 3600).toFixed(2) + " hod";
         });
     }
 
-    // Tlačítko START
     document.getElementById('start-btn').addEventListener('click', function() {
-      return t.get('card', 'shared', 'trackingData', { total: 0, start: null })
-        .then(function(data) {
-          data.start = Date.now();
-          return t.set('card', 'shared', 'trackingData', data);
-        })
-        .then(updateUI);
+      return t.get('card', 'shared', 'multiTracking', {})
+        .then(function(allData) {
+          if (!allData[me]) allData[me] = { total: 0, start: null };
+          allData[me].start = Date.now();
+          return t.set('card', 'shared', 'multiTracking', allData);
+        }).then(updateUI);
     });
 
-    // Tlačítko STOP
     document.getElementById('stop-btn').addEventListener('click', function() {
-      return t.get('card', 'shared', 'trackingData', { total: 0, start: null })
-        .then(function(data) {
-          if (data.start) {
-            var sessionSeconds = Math.floor((Date.now() - data.start) / 1000);
-            data.total += sessionSeconds;
-            data.start = null;
+      return t.get('card', 'shared', 'multiTracking', {})
+        .then(function(allData) {
+          var myData = allData[me];
+          if (myData && myData.start) {
+            myData.total += Math.floor((Date.now() - myData.start) / 1000);
+            myData.start = null;
           }
-          return t.set('card', 'shared', 'trackingData', data);
-        })
-        .then(updateUI);
+          return t.set('card', 'shared', 'multiTracking', allData);
+        }).then(updateUI);
     });
 
-    // Tlačítko RESET
-    document.getElementById('reset-btn').addEventListener('click', function() {
-      if(confirm('Opravdu chcete vymazat veškerý čas na této kartě?')) {
-        return t.set('card', 'shared', 'trackingData', { total: 0, start: null }).then(updateUI);
-      }
-    });
-
-    // Inicializace při otevření
     updateUI();
   </script>
 </body>
