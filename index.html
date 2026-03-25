@@ -6,76 +6,50 @@
 </head>
 <body>
   <script>
-    // Tvůj unikátní identifikátor (Admin)
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
 
-    // Pomocná funkce pro formátování na H:MM
     function formatToHHMM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
       return h + ":" + (m < 10 ? "0" : "") + m;
     }
 
-    var t = TrelloPowerUp.initialize({
-      // 1. Zobrazení celkového času na přední straně karty
+    TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
         return Promise.all([
           t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
           t.get('card', 'shared', 'workLogs', {})
         ]).then(function(res) {
-          var allowedUsers = res[0] || [ADMIN_ID];
-          var allLogs = res[1] || {};
+          var allowedUsers = res[0];
+          var allLogs = res[1];
           var me = t.getContext().member;
-
-          // Pokud aktuální uživatel není na whitelistu, badge mu úplně skryjeme
           if (!allowedUsers.includes(me)) return [];
 
-          var grandTotalSeconds = 0;
-          var someoneIsActive = false;
-
-          // Sčítáme čas pouze od povolených uživatelů
-          allowedUsers.forEach(function(userId) {
-            var uData = allLogs[userId];
-            if (uData) {
-              if (uData.logs) {
-                grandTotalSeconds += uData.logs.reduce((sum, log) => sum + (log.duration || 0), 0);
-              }
-              if (uData.activeStart) {
-                grandTotalSeconds += Math.floor((Date.now() - uData.activeStart) / 1000);
-                someoneIsActive = true;
+          var total = 0;
+          var active = false;
+          allowedUsers.forEach(u => {
+            if (allLogs[u]) {
+              total += (allLogs[u].logs || []).reduce((s, l) => s + (l.duration || 0), 0);
+              if (allLogs[u].activeStart) {
+                total += Math.floor((Date.now() - allLogs[u].activeStart) / 1000);
+                active = true;
               }
             }
           });
-
-          // Pokud není nic naměřeno, neukazujeme zbytečně prázdný badge
-          if (grandTotalSeconds === 0 && !someoneIsActive) return [];
-
-          return [{
-            text: formatToHHMM(grandTotalSeconds),
-            color: someoneIsActive ? 'green' : 'blue' // Zelená pokud někdo právě měří
-          }];
+          if (total === 0 && !active) return [];
+          return [{ text: formatToHHMM(total), color: active ? 'green' : 'blue' }];
         });
       },
-
-      // 2. Definice sekce na zadní straně karty
       'card-back-section': function(t, options) {
-        return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID])
-          .then(function(allowedUsers) {
-            var me = t.getContext().member;
-            
-            // Sekci zobrazíme jen těm, kdo jsou na seznamu (nebo tobě)
-            if (!allowedUsers.includes(me)) return null;
-
-            return {
-              title: 'Soukromý Time Tracking',
-              icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4fc2-880a-504e0e84429a%2Ficon-gray.svg',
-              content: {
-                type: 'iframe',
-                url: t.signUrl('./section.html'),
-                height: 400 // Výška okna Power-Upu
-              }
-            };
-          });
+        return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
+          var me = t.getContext().member;
+          if (!allowed.includes(me)) return null;
+          return {
+            title: 'Time Tracking',
+            icon: 'https://cdn.trello.com/images/icons/clock.svg', // Opravená ikona
+            content: { type: 'iframe', url: t.signUrl('./section.html'), height: 400 }
+          };
+        });
       }
     });
   </script>
