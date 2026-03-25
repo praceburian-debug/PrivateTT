@@ -12,8 +12,12 @@
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 5px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     .user-info { display: flex; align-items: center; }
-    .avatar { width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; background: #0079bf; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; overflow: hidden; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    
+    /* Avatar styl podle funkční verze */
+    .avatar { width: 30px; height: 30px; border-radius: 50%; margin-right: 12px; background: #dfe1e6; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-init { font-size: 12px; font-weight: bold; color: #172b4d; }
+
     .logs-container { display: none; margin-top: 8px; font-size: 12px; background: var(--ds-background-neutral-subtle, #f4f5f7); padding: 10px; border-radius: 5px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #ccc; }
     .log-controls { display: flex; gap: 5px; }
@@ -53,18 +57,20 @@
 
     function updateUI() {
       var me = t.getContext().member;
-      document.getElementById('status').textContent = "Uživatel: " + me;
-
+      
+      // Klíčová změna: t.card('members') načte detaily včetně avatarUrl
       return Promise.all([
         t.get('card', 'shared', 'workLogs', {}),
         t.card('members'),
         t.get('card', 'shared', 'allowedUsers', [ADMIN_ID])
       ]).then(function(res) {
         var allLogs = res[0] || {};
-        var cardMembers = (res[1] && res[1].members) ? res[1].members : [];
+        var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
 
-        // Můj timer logic
+        document.getElementById('status').textContent = "Uživatel: " + me;
+
+        // Timer pro aktuálního uživatele
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
 
@@ -87,21 +93,22 @@
         allowedUsers.forEach(userId => {
           var uData = allLogs[userId] || { logs: [] };
           var member = cardMembers.find(m => m.id === userId);
-          var name = member ? member.fullName : "Uživatel";
-          
-          // GENERUJEME AVATAR NATVRDO PŘES TRELLO CDN
-          var avatarContent = (member && member.avatar && member.avatar !== 'null') 
-            ? `<img src="https://trello-avatars.s3.amazonaws.com/${member.avatar}/30.png" onerror="this.style.display='none'; this.parentElement.innerText='${member.initials}'">` 
-            : (member ? member.initials : '?');
+          if (!member) return;
 
+          var name = member.fullName;
           var totalSec = (uData.logs || []).reduce((sum, l) => sum + (l.duration || 0), 0);
           if (uData.activeStart) totalSec += Math.floor((Date.now() - uData.activeStart) / 1000);
+
+          // Implementace avatarů z funkční verze
+          var avatarHtml = member.avatarUrl 
+            ? `<img src="${member.avatarUrl}/30.png" onerror="this.style.display='none'">`
+            : `<span class="avatar-init">${member.initials}</span>`;
 
           html += `
             <div class="user-row">
               <div class="user-header" onclick="toggleLogs('${userId}')">
                 <div class="user-info">
-                  <div class="avatar">${avatarContent}</div>
+                  <div class="avatar">${avatarHtml}</div>
                   <span><strong>${name}</strong> ${uData.activeStart ? '🟢' : ''}</span>
                 </div>
                 <span><strong>${formatToHHMM(totalSec)}</strong> ▾</span>
@@ -132,10 +139,9 @@
           });
           document.getElementById('members-to-authorize').innerHTML = adminHtml;
         }
-      });
+      }).catch(err => console.error(err));
     }
 
-    // Tlačítka Start/Stop
     document.getElementById('start-btn').onclick = function() {
       var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs', {}).then(data => {
@@ -158,11 +164,11 @@
 
     window.editLog = function(idx) {
       var me = t.getContext().member;
-      var newHours = prompt("Zadej čas v h (např. 1.5):");
-      if (newHours && !isNaN(newHours)) {
-        t.get('card', 'shared', 'workLogs').then(data => {
-          data[me].logs[idx].duration = Math.round(newHours * 3600);
-          return t.set('card', 'shared', 'workLogs', data);
+      var h = prompt("Hodin (např. 1.2):");
+      if (h && !isNaN(h)) {
+        t.get('card', 'shared', 'workLogs').then(d => {
+          d[me].logs[idx].duration = Math.round(h * 3600);
+          return t.set('card', 'shared', 'workLogs', d);
         }).then(updateUI);
       }
     };
@@ -170,17 +176,17 @@
     window.deleteLog = function(idx) {
       var me = t.getContext().member;
       if (confirm("Smazat?")) {
-        t.get('card', 'shared', 'workLogs').then(data => {
-          data[me].logs.splice(idx, 1);
-          return t.set('card', 'shared', 'workLogs', data);
+        t.get('card', 'shared', 'workLogs').then(d => {
+          d[me].logs.splice(idx, 1);
+          return t.set('card', 'shared', 'workLogs', d);
         }).then(updateUI);
       }
     };
 
     window.toggleAccess = function(uid) {
-      t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(allowed => {
-        allowed = allowed.includes(uid) ? (uid === ADMIN_ID ? allowed : allowed.filter(id => id !== uid)) : [...allowed, uid];
-        return t.set('card', 'shared', 'allowedUsers', allowed);
+      t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(a => {
+        a = a.includes(uid) ? (uid===ADMIN_ID ? a : a.filter(i=>i!==uid)) : [...a, uid];
+        return t.set('card', 'shared', 'allowedUsers', a);
       }).then(updateUI);
     };
 
