@@ -1,61 +1,29 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <script src="https://p.trellocdn.com/power-up.min.js"></script>
-</head>
-<body>
-  <div id="content">
-    <h3>Trackovaný čas</h3>
-    <div id="time-display">Načítání...</div>
-  </div>
-
-  <script>
-    // Seznam ID uživatelů, kteří mají právo vidět čas
-    // Své ID zjistíte na https://trello.com/me.json
-    const ALLOWED_USERS = [
-      '651e8ba7f2ed2f797856dfed',
-    ];
-
-    var t = TrelloPowerUp.initialize({
-     // V index.html změňte sekci card-badges takto:
-'card-badges': function(t, options) {
-  return t.get('card', 'shared', 'trackingData')
-  .then(function(data) {
-    const currentMember = t.getContext().member;
-    if (!ALLOWED_USERS.includes(currentMember) || !data) {
-      return [];
-    }
-
-    // Výpočet pro zobrazení (i když zrovna běží)
-    let totalSeconds = data.total;
-    if (data.start) {
-      totalSeconds += Math.floor((Date.now() - data.start) / 1000);
-    }
-
-    const hours = (totalSeconds / 3600).toFixed(2);
-
-    return [{
-      text: hours + ' hod',
-      color: data.start ? 'green' : 'blue' // Zelená pokud právě běží
-    }];
-  });
-},
-      'card-back-section': function(t, options) {
-        const currentMember = t.getContext().member;
-
-        if (ALLOWED_USERS.includes(currentMember)) {
-          return {
-            title: 'Soukromý Time Tracking',
-           content: {
-              type: 'iframe',
-              url: t.signUrl('./section.html'), // Zde by byl formulář pro zadání času
-              height: 100
-            }
-          };
+var t = TrelloPowerUp.initialize({
+  'card-badges': function(t, options) {
+    return t.get('card', 'shared', 'trackingData')
+      .then(function(data) {
+        if (!data || (!data.total && !data.start)) return [];
+        
+        let totalSeconds = data.total || 0;
+        if (data.start) {
+          totalSeconds += Math.floor((Date.now() - data.start) / 1000);
         }
-        return null; // Pro ostatní sekce vůbec neexistuje
+        return [{
+          text: (totalSeconds / 3600).toFixed(2) + ' hod',
+          color: data.start ? 'green' : 'blue'
+        }];
+      });
+  },
+  'card-back-section': function(t, options) {
+    // Teď to vracíme VŽDY, bez kontroly ID
+    return {
+      title: 'Soukromý Time Tracking',
+      icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4fc2-880a-504e0e84429a%2Ficon-gray.svg',
+      content: {
+        type: 'iframe',
+        url: t.signUrl('./section.html'),
+        height: 180
       }
-    });
-  </script>
-</body>
-</html>
+    };
+  }
+});
