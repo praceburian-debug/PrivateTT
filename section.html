@@ -8,43 +8,32 @@
     .status-bar { font-size: 9px; opacity: 0.5; margin-bottom: 10px; }
     .my-timer-card { background: var(--ds-background-neutral, #f4f5f7); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--ds-border, #ccc); text-align: center; }
     .user-timer { font-size: 32px; font-weight: bold; margin-bottom: 10px; font-family: monospace; }
-    
     .user-row { margin-bottom: 12px; border-bottom: 1px solid var(--ds-border, #ddd); padding-bottom: 8px; }
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 5px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     .user-info { display: flex; align-items: center; }
-    
-    /* Styl pro avatara (obrázek i iniciály) */
     .avatar { width: 28px; height: 28px; border-radius: 50%; margin-right: 10px; background: #0079bf; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; overflow: hidden; border: 1px solid rgba(0,0,0,0.1); }
     .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    
     .logs-container { display: none; margin-top: 8px; font-size: 12px; background: var(--ds-background-neutral-subtle, #f4f5f7); padding: 10px; border-radius: 5px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #ccc; }
-    
     .log-controls { display: flex; gap: 5px; }
     .log-controls button { padding: 2px 8px; font-size: 11px; cursor: pointer; border-radius: 3px; border: 1px solid #ccc; background: white; }
     .btn-del { color: #eb5a46; border-color: #eb5a46 !important; }
-
     .admin-panel { margin-top: 30px; padding: 12px; border: 1px dashed #f2d600; background: #fff9ce; border-radius: 8px; color: #333; }
     .member-select-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 8px; padding: 6px; background: rgba(255,255,255,0.7); border-radius: 4px; }
     .btn-access { padding: 4px 12px; font-size: 11px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white; font-weight: bold; }
     .btn-active { background: #61bd4f; color: white; border: none; }
-    
     button.mod-primary { width: 100%; padding: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
-
   <div id="status" class="status-bar">Načítání...</div>
-
   <div class="my-timer-card">
     <div id="my-display" class="user-timer">00:00:00</div>
     <button id="start-btn" class="mod-primary">SPUSTIT MĚŘENÍ</button>
     <button id="stop-btn" style="display:none; width:100%; background:#eb5a46; color:white; border:none; padding:10px; font-weight:bold; border-radius:3px; cursor:pointer;">ZASTAVIT A ULOŽIT</button>
   </div>
-
   <div id="users-list"></div>
-
   <div id="admin-section" style="display:none;" class="admin-panel">
     <h4 style="margin-top:0; font-size:12px;">SPRÁVA OPRÁVNĚNÍ (ADMIN)</h4>
     <div id="members-to-authorize"></div>
@@ -68,14 +57,13 @@
 
       return Promise.all([
         t.get('card', 'shared', 'workLogs', {}),
-        t.card('members'),
+        t.card('all'), // Změna z 'members' na 'all' pro získání detailů
         t.get('card', 'shared', 'allowedUsers', [ADMIN_ID])
       ]).then(function(res) {
         var allLogs = res[0] || {};
-        var cardMembers = res[1].members || [];
+        var cardMembers = (res[1] && res[1].members) ? res[1].members : [];
         var allowedUsers = res[2] || [ADMIN_ID];
 
-        // 1. Můj timer
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
 
@@ -94,16 +82,15 @@
           if (timerInterval) clearInterval(timerInterval);
         }
 
-        // 2. Seznam všech logů
         var html = '';
         allowedUsers.forEach(userId => {
           var uData = allLogs[userId] || { logs: [] };
           var member = cardMembers.find(m => m.id === userId);
           var name = member ? member.fullName : "Uživatel";
           
-          // Logika pro avatar (fotka vs iniciály)
-          var avatarContent = (member && member.avatarUrl) 
-            ? `<img src="${member.avatarUrl}/30.png" alt="${member.initials}">` 
+          // Vylepšená detekce avataru
+          var avatarContent = (member && member.avatar && member.avatar.length > 5) 
+            ? `<img src="${member.avatar}/30.png" onerror="this.parentElement.innerHTML='${member.initials}'">` 
             : (member ? member.initials : '?');
 
           var totalSec = (uData.logs || []).reduce((sum, l) => sum + (l.duration || 0), 0);
@@ -135,26 +122,18 @@
         });
         document.getElementById('users-list').innerHTML = html;
 
-        // 3. Admin panel
         if (me === ADMIN_ID) {
           document.getElementById('admin-section').style.display = 'block';
           var adminHtml = '';
           cardMembers.forEach(m => {
             var isAllowed = allowedUsers.includes(m.id);
-            adminHtml += `
-              <div class="member-select-row">
-                <span>${m.fullName}</span>
-                <button class="btn-access ${isAllowed ? 'btn-active' : ''}" onclick="toggleAccess('${m.id}')">
-                  ${isAllowed ? 'Povolen' : 'Nepovolen'}
-                </button>
-              </div>`;
+            adminHtml += `<div class="member-select-row"><span>${m.fullName}</span><button class="btn-access ${isAllowed ? 'btn-active' : ''}" onclick="toggleAccess('${m.id}')">${isAllowed ? 'Povolen' : 'Nepovolen'}</button></div>`;
           });
           document.getElementById('members-to-authorize').innerHTML = adminHtml;
         }
-      }).catch(err => console.error("Chyba UI:", err));
+      });
     }
 
-    // HANDLERY
     document.getElementById('start-btn').onclick = function() {
       var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs', {}).then(data => {
@@ -177,10 +156,10 @@
 
     window.editLog = function(idx) {
       var me = t.getContext().member;
-      var newHours = prompt("Zadej nový čas v hodinách (např. 1.5):");
-      if (newHours !== null && !isNaN(parseFloat(newHours))) {
+      var newHours = prompt("Zadej čas v h (např. 1.5):");
+      if (newHours && !isNaN(newHours)) {
         t.get('card', 'shared', 'workLogs').then(data => {
-          data[me].logs[idx].duration = Math.round(parseFloat(newHours) * 3600);
+          data[me].logs[idx].duration = Math.round(newHours * 3600);
           return t.set('card', 'shared', 'workLogs', data);
         }).then(updateUI);
       }
@@ -188,7 +167,7 @@
 
     window.deleteLog = function(idx) {
       var me = t.getContext().member;
-      if (confirm("Smazat tento záznam?")) {
+      if (confirm("Smazat?")) {
         t.get('card', 'shared', 'workLogs').then(data => {
           data[me].logs.splice(idx, 1);
           return t.set('card', 'shared', 'workLogs', data);
@@ -198,11 +177,7 @@
 
     window.toggleAccess = function(uid) {
       t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(allowed => {
-        if (allowed.includes(uid)) {
-          if (uid !== ADMIN_ID) allowed = allowed.filter(id => id !== uid);
-        } else {
-          allowed.push(uid);
-        }
+        allowed = allowed.includes(uid) ? (uid === ADMIN_ID ? allowed : allowed.filter(id => id !== uid)) : [...allowed, uid];
         return t.set('card', 'shared', 'allowedUsers', allowed);
       }).then(updateUI);
     };
