@@ -18,22 +18,29 @@
     ];
 
     var t = TrelloPowerUp.initialize({
-      'card-badges': function(t, options) {
-        return t.get('card', 'shared', 'trackedTime')
-        .then(function(time) {
-          const currentMember = t.getContext().member;
-          
-          // Pokud uživatel není v seznamu, nevrátíme žádný odznak
-          if (!ALLOWED_USERS.includes(currentMember)) {
-            return [];
-          }
+     // V index.html změňte sekci card-badges takto:
+'card-badges': function(t, options) {
+  return t.get('card', 'shared', 'trackingData')
+  .then(function(data) {
+    const currentMember = t.getContext().member;
+    if (!ALLOWED_USERS.includes(currentMember) || !data) {
+      return [];
+    }
 
-          return [{
-            text: time ? time + ' hod' : '0 hod',
-            color: 'blue'
-          }];
-        });
-      },
+    // Výpočet pro zobrazení (i když zrovna běží)
+    let totalSeconds = data.total;
+    if (data.start) {
+      totalSeconds += Math.floor((Date.now() - data.start) / 1000);
+    }
+
+    const hours = (totalSeconds / 3600).toFixed(2);
+
+    return [{
+      text: hours + ' hod',
+      color: data.start ? 'green' : 'blue' // Zelená pokud právě běží
+    }];
+  });
+},
       'card-back-section': function(t, options) {
         const currentMember = t.getContext().member;
 
