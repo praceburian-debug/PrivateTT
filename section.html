@@ -4,161 +4,143 @@
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-    /* Dynamické barvy podle Trella */
-    body { 
-      padding: 10px; 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: var(--ds-text, #172b4d); /* Černá v light, bílá v dark */
-    }
+    body { padding: 10px; font-family: sans-serif; color: var(--ds-text, #172b4d); }
+    .my-timer-card { background: var(--ds-background-neutral, #f4f5f7); padding: 12px; border-radius: 8px; margin-bottom: 20px; }
+    .user-timer { font-size: 26px; font-weight: bold; margin-bottom: 10px; }
     
-    .label { font-size: 12px; color: var(--ds-text-subtle, #5e6c84); text-transform: uppercase; margin-bottom: 4px; }
-    
-    .my-timer-container { margin-bottom: 20px; padding: 10px; background: var(--ds-background-neutral, #f4f5f7); border-radius: 8px; }
-    .user-timer { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-    
-    button { width: 100%; cursor: pointer; font-weight: bold; border-radius: 3px; border: none; padding: 8px; }
-    .btn-stop { background-color: var(--ds-background-danger, #eb5a46); color: white; }
-    .btn-stop:hover { background-color: var(--ds-background-danger-hovered, #cf513d); }
-    
-    .history-section { margin-top: 20px; border-top: 1px solid var(--ds-border, #ddd); padding-top: 15px; }
-    .user-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 4px 0; }
+    .user-row { margin-bottom: 15px; border-bottom: 1px solid var(--ds-border, #ddd); padding-bottom: 10px; }
+    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
     .user-info { display: flex; align-items: center; }
-    .avatar { width: 24px; height: 24px; border-radius: 50%; margin-right: 10px; background: #ccc; }
-    .user-name { font-size: 14px; font-weight: 500; }
-    .user-time-val { font-family: monospace; font-weight: bold; font-size: 14px; }
+    .avatar { width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; background: #0079bf; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; }
     
-    .active-dot { height: 8px; width: 8px; background-color: #61bd4f; border-radius: 50%; margin-left: 5px; display: inline-block; }
+    .logs-container { display: none; margin-top: 10px; font-size: 12px; background: var(--ds-background-neutral-subtle, #ebecf0); padding: 5px; border-radius: 4px; }
+    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dotted #ccc; }
+    .log-controls button { padding: 2px 5px; font-size: 10px; margin-left: 3px; width: auto; display: inline-block; }
+    
+    .edit-input { width: 50px; font-size: 11px; }
+    button.mod-danger { background: var(--ds-background-danger, #eb5a46); color: white; border: none; }
   </style>
 </head>
 <body>
 
-  <div class="my-timer-container">
-    <div class="label">Můj aktuální čas</div>
-    <div class="user-timer" id="my-display">00:00:00</div>
-    <button id="start-btn" class="mod-primary">Spustit měření</button>
-    <button id="stop-btn" class="btn-stop" style="display:none;">Zastavit a uložit</button>
+  <div class="my-timer-card">
+    <div id="my-display" class="user-timer">00:00:00</div>
+    <button id="start-btn" class="mod-primary">Start</button>
+    <button id="stop-btn" class="mod-danger" style="display:none;">Stop</button>
   </div>
-  
-  <div class="history-section">
-    <div class="label">Přehled časů na kartě</div>
-    <div id="users-list"></div>
-    <div class="user-row" style="border-top: 1px dashed var(--ds-border, #ccc); margin-top: 10px; padding-top: 10px;">
-        <span class="user-name">CELKEM</span>
-        <span class="user-time-val" id="grand-total">0.00 hod</span>
-    </div>
-  </div>
+
+  <div id="users-list"></div>
 
   <script>
     var t = TrelloPowerUp.iframe();
-    var timerInterval;
     var me = t.getContext().member;
+    var timerInterval;
 
-    function formatTime(seconds) {
-      return new Date(seconds * 1000).toISOString().substr(11, 8);
-    }
+    // Pomocná funkce pro formátování sekund na HH:MM:SS
+    function fTime(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
 
     function updateUI() {
       return Promise.all([
-        t.get('card', 'shared', 'multiTracking', {}),
+        t.get('card', 'shared', 'workLogs', {}), // Nový klíč pro novou strukturu
         t.card('members')
-      ]).then(function(results) {
-        var allData = results[0];
-        var cardMembers = results[1].members;
-        var myData = allData[me] || { total: 0, start: null };
-        
-        // 1. Můj hlavní timer
-        if (myData.start) {
+      ]).then(function(res) {
+        var allLogs = res[0];
+        var members = res[1].members;
+        var myData = allLogs[me] || { activeStart: null, logs: [] };
+
+        // 1. Logika mého běžícího timeru
+        if (myData.activeStart) {
           document.getElementById('start-btn').style.display = 'none';
           document.getElementById('stop-btn').style.display = 'block';
           if (timerInterval) clearInterval(timerInterval);
-          timerInterval = setInterval(function() {
-            var elapsed = Math.floor((Date.now() - myData.start) / 1000);
-            document.getElementById('my-display').textContent = formatTime(myData.total + elapsed);
+          timerInterval = setInterval(() => {
+            var now = Math.floor((Date.now() - myData.activeStart) / 1000);
+            document.getElementById('my-display').textContent = fTime(now);
           }, 1000);
         } else {
           document.getElementById('start-btn').style.display = 'block';
           document.getElementById('stop-btn').style.display = 'none';
-          document.getElementById('my-display').textContent = formatTime(myData.total);
+          document.getElementById('my-display').textContent = "00:00:00";
           if (timerInterval) clearInterval(timerInterval);
         }
 
-        // 2. Vykreslení všech uživatelů
-        var listHtml = '';
-        var grandTotalSeconds = 0;
-
-        // Projdeme všechna data v databázi karty
-        Object.keys(allData).forEach(function(userId) {
-          var userData = allData[userId];
-          var member = cardMembers.find(m => m.id === userId);
+        // 2. Vykreslení seznamu uživatelů a jejich logů
+        var html = '';
+        Object.keys(allLogs).forEach(userId => {
+          var uData = allLogs[userId];
+          var member = members.find(m => m.id === userId);
+          var name = member ? member.fullName : "Uživatel";
           
-          var currentTotal = userData.total;
-          var isActive = false;
-          if (userData.start) {
-            currentTotal += Math.floor((Date.now() - userData.start) / 1000);
-            isActive = true;
-          }
-          grandTotalSeconds += currentTotal;
+          var totalSec = uData.logs.reduce((sum, l) => sum + l.duration, 0);
+          if (uData.activeStart) totalSec += Math.floor((Date.now() - uData.activeStart) / 1000);
 
-         // Najdeme jméno a fotku
-var name = member ? member.fullName : "Uživatel " + userId.substring(0,4);
-var initials = member ? member.initials : "??";
-
-// Oprava logiky pro avatar
-var avatarUrl = null;
-if (member && member.avatar && member.avatar !== "null") {
-    // Pokud je avatar jen hash, doplníme Trello URL, pokud je to celá URL, necháme ji
-    avatarUrl = member.avatar.indexOf('http') === 0 ? member.avatar : "https://trello-avatars.s3.amazonaws.com/" + member.avatar + "/30.png";
-} else if (member && member.avatarUrl) {
-    avatarUrl = member.avatarUrl + "/30.png";
-}
-
-// Pokud fotka existuje, ukážeme ji, jinak ukážeme iniciály v kroužku
-var avatarHtml = avatarUrl 
-    ? `<img src="${avatarUrl}" class="avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` 
-    : '';
-
-var initialsHtml = `<div class="avatar" style="display:${avatarUrl ? 'none' : 'flex'}; align-items:center; justify-content:center; background:var(--ds-background-accent-blue-subtler, #0079bf); color:white; font-size:10px;">${initials}</div>`;
-
-listHtml += `
-  <div class="user-row">
-    <div class="user-info">
-      <div style="position:relative; width:24px; height:24px; margin-right:10px;">
-        ${avatarHtml}
-        ${initialsHtml}
-      </div>
-      <span class="user-name">${name} ${isActive ? '<span class="active-dot"></span>' : ''}</span>
-    </div>
-    <span class="user-time-val">${(currentTotal / 3600).toFixed(2)} h</span>
-  </div>
-`;
+          html += `
+            <div class="user-row">
+              <div class="user-header" onclick="toggleLogs('${userId}')">
+                <div class="user-info">
+                  <div class="avatar">${member ? member.initials : '?'}</div>
+                  <span><strong>${name}</strong></span>
+                </div>
+                <span>${(totalSec / 3600).toFixed(2)} h ▾</span>
+              </div>
+              <div class="logs-container" id="logs-${userId}">
+                ${uData.logs.map((log, idx) => `
+                  <div class="log-item">
+                    <span>${new Date(log.date).toLocaleDateString()}: ${(log.duration / 3600).toFixed(2)} h</span>
+                    <div class="log-controls">
+                      <button onclick="editLog('${userId}', ${idx})">✎</button>
+                      <button class="mod-danger" onclick="deleteLog('${userId}', ${idx})">✕</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>`;
         });
-
-        document.getElementById('users-list').innerHTML = listHtml || '<div style="font-size:12px; opacity:0.6;">Zatím žádné záznamy</div>';
-        document.getElementById('grand-total').textContent = (grandTotalSeconds / 3600).toFixed(2) + " hod";
+        document.getElementById('users-list').innerHTML = html;
       });
     }
 
-    // Event listenery pro Start/Stop
+    // --- AKCE ---
+    
     document.getElementById('start-btn').addEventListener('click', function() {
-      return t.get('card', 'shared', 'multiTracking', {})
-        .then(function(allData) {
-          if (!allData[me]) allData[me] = { total: 0, start: null };
-          allData[me].start = Date.now();
-          return t.set('card', 'shared', 'multiTracking', allData);
-        }).then(updateUI);
+      t.get('card', 'shared', 'workLogs', {}).then(data => {
+        if (!data[me]) data[me] = { activeStart: null, logs: [] };
+        data[me].activeStart = Date.now();
+        return t.set('card', 'shared', 'workLogs', data);
+      }).then(updateUI);
     });
 
     document.getElementById('stop-btn').addEventListener('click', function() {
-      return t.get('card', 'shared', 'multiTracking', {})
-        .then(function(allData) {
-          var myData = allData[me];
-          if (myData && myData.start) {
-            myData.total += Math.floor((Date.now() - myData.start) / 1000);
-            myData.start = null;
-          }
-          return t.set('card', 'shared', 'multiTracking', allData);
-        }).then(updateUI);
+      t.get('card', 'shared', 'workLogs', {}).then(data => {
+        var start = data[me].activeStart;
+        var duration = Math.floor((Date.now() - start) / 1000);
+        data[me].logs.push({ date: Date.now(), duration: duration });
+        data[me].activeStart = null;
+        return t.set('card', 'shared', 'workLogs', data);
+      }).then(updateUI);
     });
+
+    window.toggleLogs = function(id) {
+      var el = document.getElementById('logs-' + id);
+      el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    };
+
+    window.deleteLog = function(uid, idx) {
+      t.get('card', 'shared', 'workLogs').then(data => {
+        data[uid].logs.splice(idx, 1);
+        return t.set('card', 'shared', 'workLogs', data);
+      }).then(updateUI);
+    };
+
+    window.editLog = function(uid, idx) {
+      var newHours = prompt("Zadej nový čas v hodinách (např. 1.5):");
+      if (newHours !== null) {
+        t.get('card', 'shared', 'workLogs').then(data => {
+          data[uid].logs[idx].duration = parseFloat(newHours) * 3600;
+          return t.set('card', 'shared', 'workLogs', data);
+        }).then(updateUI);
+      }
+    };
 
     updateUI();
   </script>
