@@ -4,10 +4,19 @@
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-    /* Odstraníme defaultní marginy těla, aby sizeTo fungovalo přesně */
-    body { margin: 0; padding: 10px 0; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); overflow: hidden; }
+    /* Agresivní minimalizace okrajů */
+    body { 
+      margin: 0; 
+      padding: 0; /* Úplně bez paddingu nahoře */
+      font-family: -apple-system, sans-serif; 
+      color: var(--ds-text, #172b4d); 
+      overflow: hidden;
+    }
     
-    .container { padding: 0 4px; }
+    .container { 
+      padding: 0; 
+      margin-top: -4px; /* Posuneme to lehce nahoru k popisu */
+    }
 
     /* Hlavní kompaktní lišta */
     .main-header {
@@ -15,75 +24,75 @@
       align-items: center;
       justify-content: space-between;
       cursor: pointer;
-      padding: 5px 0;
+      padding: 2px 0; /* Minimální vertikální padding */
       user-select: none;
     }
 
     .timer-group {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .play-btn { 
-      width: 40px; height: 40px; 
+      width: 36px; height: 36px; 
       border-radius: 50%; border: none; 
       cursor: pointer; display: flex; 
       align-items: center; justify-content: center; 
       color: white !important; flex-shrink: 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
       font-size: 0;
     }
     .btn-start { background-color: #00a854 !important; }
-    .btn-start::before { content: "▶"; font-size: 16px; margin-left: 3px; }
+    .btn-start::before { content: "▶"; font-size: 14px; margin-left: 2px; }
     .btn-stop { background-color: #eb5a46 !important; }
-    .btn-stop::before { content: "■"; font-size: 18px; }
+    .btn-stop::before { content: "■"; font-size: 16px; }
 
     .display-now { 
-      font-size: 26px; font-weight: bold; font-family: monospace; 
-      color: var(--ds-text, #172b4d); transform: translateY(2px);
+      font-size: 22px; font-weight: bold; font-family: monospace; 
+      color: var(--ds-text, #172b4d); transform: translateY(1px);
     }
 
     .chevron {
-      font-size: 18px; color: #6b778c; transition: transform 0.2s;
-      padding-right: 10px;
+      font-size: 16px; color: #6b778c; transition: transform 0.2s;
+      padding-right: 8px;
     }
     .chevron.open { transform: rotate(180deg); }
 
     /* Schovaný obsah */
-    #collapsible-content { display: none; margin-top: 15px; border-top: 1px solid var(--ds-border, #eee); padding-top: 10px; }
+    #collapsible-content { display: none; margin-top: 10px; border-top: 1px solid var(--ds-border, #eee); padding-top: 8px; }
 
     /* Seznamy a uživatelé */
-    .user-row { margin-bottom: 5px; border-bottom: 1px solid #f4f5f7; }
-    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 8px; border-radius: 4px; }
+    .user-row { margin-bottom: 2px; border-bottom: 1px solid #f4f5f7; }
+    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 6px; border-radius: 4px; font-size: 13px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     
-    .logs-container { display: none; padding: 5px 10px 15px 15px; font-size: 12px; }
-    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dotted #eee; }
+    .logs-container { display: none; padding: 5px 10px 10px 15px; font-size: 12px; }
+    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #eee; }
     
     .log-controls { display: flex; gap: 8px; }
     .circle-btn {
-      width: 24px; height: 24px; border-radius: 50%; border: none;
+      width: 22px; height: 22px; border-radius: 50%; border: none;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: white !important; font-size: 11px;
+      cursor: pointer; color: white !important; font-size: 10px;
     }
     .btn-edit { background-color: #0079bf !important; }
     .btn-delete { background-color: #eb5a46 !important; }
 
-    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 10px 0; font-size: 11px; font-weight: bold; text-decoration: none; }
+    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 8px 0; font-size: 11px; font-weight: bold; text-decoration: none; }
     .add-manual-btn:hover { text-decoration: underline; }
 
-    .admin-panel { margin-top: 25px; border-top: 2px solid #eee; padding-top: 10px; }
-    .admin-title { font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase; font-size: 10px; }
-    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
+    .admin-panel { margin-top: 15px; border-top: 2px solid #eee; padding-top: 8px; }
+    .admin-title { font-weight: bold; color: #888; margin-bottom: 5px; text-transform: uppercase; font-size: 9px; }
+    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px; }
 
     /* Switch */
-    .switch { position: relative; width: 34px; height: 18px; }
+    .switch { position: relative; width: 30px; height: 16px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px; transition: .4s; }
-    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .4s; }
+    .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .4s; }
     input:checked + .slider { background-color: #00a854; }
-    input:checked + .slider:before { transform: translateX(16px); }
+    input:checked + .slider:before { transform: translateX(14px); }
   </style>
 </head>
 <body>
@@ -99,7 +108,7 @@
     <div id="collapsible-content">
       <div id="users-list"></div>
       <div id="admin-section" style="display:none;" class="admin-panel">
-        <div class="admin-title">Administrace přístupů</div>
+        <div class="admin-title">Administrace</div>
         <div id="members-to-authorize"></div>
       </div>
     </div>
@@ -111,12 +120,10 @@
     var openLogsId = null;
     var isExpanded = false;
 
-    // Funkce pro automatické přizpůsobení výšky
     function resize() {
-      t.sizeTo(document.body).catch(function(e){ /* ignore */ });
+      t.sizeTo(document.body).catch(function(e){});
     }
 
-    // Přepínání hlavního rozbalení
     document.getElementById('header-bar').onclick = function(e) {
       if (e.target.closest('#main-timer-btn')) return;
       isExpanded = !isExpanded;
@@ -130,16 +137,6 @@
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
       return (h > 0 ? h + "h " : "") + m + "m";
-    }
-
-    function parseToSeconds(str) {
-      let seconds = 0;
-      const hMatch = str.match(/(\d+)\s*h/);
-      const mMatch = str.match(/(\d+)\s*m/);
-      if (hMatch) seconds += parseInt(hMatch[1]) * 3600;
-      if (mMatch) seconds += parseInt(mMatch[1]) * 60;
-      if (!hMatch && !mMatch && !isNaN(str) && str !== "") seconds += parseInt(str) * 60;
-      return seconds;
     }
 
     function updateUI(forceFullRedraw = false) {
@@ -195,7 +192,7 @@
               </div>`;
           });
           document.getElementById('users-list').innerHTML = html;
-          resize(); // Přizpůsobit po vykreslení seznamu
+          resize();
         }
 
         if (me === ADMIN_ID && (forceFullRedraw || document.getElementById('members-to-authorize').innerHTML === "")) {
@@ -228,7 +225,7 @@
     window.toggleLogs = function(id) {
       openLogsId = (openLogsId === id) ? null : id;
       updateUI(true);
-      setTimeout(resize, 50); // Malá prodleva pro animaci prohlížeče
+      setTimeout(resize, 50);
     };
 
     window.toggleAccess = function(uid) {
@@ -250,7 +247,6 @@
 
     setInterval(() => updateUI(false), 1000);
     updateUI(true);
-    // Prvotní resize po načtení
     setTimeout(resize, 500);
   </script>
 </body>
