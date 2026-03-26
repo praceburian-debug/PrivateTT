@@ -43,13 +43,12 @@
         });
       },
 
-      'card-back-section': function(t, options) {
+     'card-back-section': function(t, options) {
         return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
           var me = t.getContext().member;
           if (!allowed.includes(me)) return null;
           return {
-            title: '',
-            icon: null,
+            title: '', // Přidal jsem název, aby Trello mělo validní objekt
             content: {
               type: 'iframe',
               url: t.signUrl('./section.html'),
@@ -59,25 +58,17 @@
         });
       },
 
-      // --- TADY JE TA NOVÁ ČÁST PRO REPORTY ---
       'board-buttons': function(t, options) {
         var me = t.getContext().member;
-        
-        // Pokud nejsi admin, tlačítko se vůbec nevykreslí
-        if (me !== ADMIN_ID) {
-          return [];
-        }
+        if (me !== ADMIN_ID) return [];
 
         return [{
-          icon: {
-            dark: './icon.svg',
-            light: './icon.svg'
-          },
+          icon: './icon.svg', // Zjednodušená cesta pro button
           text: 'Reporty času',
           callback: function(t) {
             return t.modal({
               title: "Přehled odpracovaného času",
-              url: './report.html?v=1', // Cesta k novému souboru s grafy
+              url: './report.html',
               fullscreen: true
             });
           }
