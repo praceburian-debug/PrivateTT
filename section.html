@@ -7,8 +7,15 @@
     body { padding: 12px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
     .status-bar { font-size: 9px; opacity: 0.5; margin-bottom: 12px; }
     
-    /* Horní Timer - Zarovnáno na střed */
-    .timer-row { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 30px; padding: 10px; }
+    /* Timer Row - Zarovnáno vlevo, svisle na střed */
+    .timer-row { 
+      display: flex; 
+      align-items: center; /* Toto vycentruje čas na střed výšky tlačítka */
+      justify-content: flex-start; 
+      gap: 15px; 
+      margin-bottom: 30px; 
+      padding: 5px 0; 
+    }
     
     .play-btn { 
       width: 44px; height: 44px; 
@@ -23,9 +30,16 @@
     .btn-start { background-color: #00a854 !important; }
     .btn-stop { background-color: #eb5a46 !important; }
 
-    .display-now { font-size: 32px; font-weight: bold; font-family: monospace; color: var(--ds-text, #172b4d); }
+    /* Čas zarovnaný k buttonu */
+    .display-now { 
+      font-size: 28px; 
+      font-weight: bold; 
+      font-family: monospace; 
+      color: var(--ds-text, #172b4d);
+      line-height: 1; /* Pomáhá přesnému svislému zarovnání */
+    }
 
-    /* Seznamy a řádky */
+    /* Seznamy uživatelů */
     .user-row { margin-bottom: 8px; border-bottom: 1px solid var(--ds-border, #eee); padding-bottom: 5px; }
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 8px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
@@ -33,25 +47,24 @@
     .logs-container { display: none; margin-top: 5px; font-size: 12px; padding: 0 8px 10px 15px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dotted #eee; color: #5e6c84; }
     
-    /* Nová barevná kulatá tlačítka v historii */
+    /* Barevná kulatá tlačítka v historii */
     .log-controls { display: flex; gap: 6px; }
     .circle-btn {
       width: 24px; height: 24px;
       border-radius: 50%; border: none;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: white; font-size: 12px;
+      cursor: pointer; color: white; font-size: 11px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
       transition: opacity 0.2s;
     }
     .circle-btn:hover { opacity: 0.8; }
-    .circle-btn:active { transform: scale(0.9); }
-    .btn-edit { background-color: #0079bf; } /* Modrá s tužkou */
-    .btn-delete { background-color: #eb5a46; } /* Červená s křížkem */
+    .btn-edit { background-color: #0079bf; }
+    .btn-delete { background-color: #eb5a46; }
     
     .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 12px 0; font-size: 11px; font-weight: bold; text-decoration: underline; }
-    .edit-input { width: 90px; padding: 4px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
+    .edit-input { width: 95px; padding: 4px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
     
-    /* Admin Switch */
+    /* Admin sekce */
     .admin-panel { margin-top: 30px; border-top: 2px solid #eee; padding-top: 15px; }
     .admin-title { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 12px; text-transform: uppercase; }
     .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; }
@@ -118,13 +131,11 @@
         var btn = document.getElementById('main-timer-btn');
         
         if (myData.activeStart) {
-          btn.innerHTML = "■"; 
-          btn.className = "play-btn btn-stop";
+          btn.innerHTML = "■"; btn.className = "play-btn btn-stop";
           var sess = Math.floor((Date.now() - myData.activeStart) / 1000);
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal + sess);
         } else {
-          btn.innerHTML = "▶"; 
-          btn.className = "play-btn btn-start";
+          btn.innerHTML = "▶"; btn.className = "play-btn btn-start";
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
         }
 
@@ -150,8 +161,8 @@
                         <span>${new Date(log.date).toLocaleDateString()}: <b id="val-${userId}-${idx}">${formatToHM(log.duration)}</b></span>
                         ${userId === me ? `
                         <div class="log-controls">
-                          <button title="Upravit" class="circle-btn btn-edit" onclick="startEdit('${userId}', ${idx}, '${formatToHM(log.duration)}')">✎</button>
-                          <button title="Smazat" class="circle-btn btn-delete" onclick="deleteLog(${idx})">✕</button>
+                          <button class="circle-btn btn-edit" onclick="startEdit('${userId}', ${idx}, '${formatToHM(log.duration)}')">✎</button>
+                          <button class="circle-btn btn-delete" onclick="deleteLog(${idx})">✕</button>
                         </div>` : ''}
                       </div>`).join('')}
                   </div>
