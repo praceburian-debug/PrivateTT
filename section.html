@@ -16,12 +16,10 @@
     .logs-container { display: none; margin-top: 5px; font-size: 12px; padding: 0 8px 8px 15px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #eee; color: #5e6c84; }
     
-    /* Inline Editace */
-    .edit-input { width: 45px; padding: 2px 4px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
+    /* Vylepšená inline editace */
+    .edit-input { width: 80px; padding: 2px 4px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
     .log-controls button { padding: 0 6px; font-size: 10px; cursor: pointer; margin-left: 3px; background: transparent; border: 1px solid #ddd; border-radius: 3px; color: #888; }
-    .log-controls button:hover { border-color: #888; color: #444; }
     
-    /* Admin Toggle */
     .admin-panel { margin-top: 25px; border-top: 2px solid #eee; padding-top: 10px; }
     .admin-title { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 15px; letter-spacing: 1px; }
     .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f9f9f9; }
@@ -52,13 +50,29 @@
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
     var t = TrelloPowerUp.iframe();
     var openLogsId = null;
-    var editingIdx = null; // Sleduje, který řádek se právě edituje
+    var editingIdx = null;
 
+    // Pomocné funkce pro formátování
     function fTimeFull(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
-    function formatToHHMM(seconds) {
+    
+    function formatToHM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
-      return h + ":" + (m < 10 ? "0" : "") + m;
+      let res = "";
+      if (h > 0) res += h + "h ";
+      res += m + "m";
+      return res;
+    }
+
+    function parseToSeconds(str) {
+      let seconds = 0;
+      const hMatch = str.match(/(\d+)\s*h/);
+      const mMatch = str.match(/(\d+)\s*m/);
+      if (hMatch) seconds += parseInt(hMatch[1]) * 3600;
+      if (mMatch) seconds += parseInt(mMatch[1]) * 60;
+      // Pokud uživatel zadal jen číslo bez jednotek, bereme to jako minuty
+      if (!hMatch && !mMatch && !isNaN(str)) seconds += parseInt(str) * 60;
+      return seconds;
     }
 
     function updateUI(forceFullRedraw = false) {
@@ -72,9 +86,9 @@
         var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
 
-        // Horní timer
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
+        
         if (myData.activeStart) {
           document.getElementById('start-btn').style.display = 'none';
           document.getElementById('stop-btn').style.display = 'block';
@@ -86,7 +100,6 @@
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
         }
 
-        // Redraw seznamu (pouze pokud neprobíhá editace, abychom nezavřeli input)
         if (editingIdx === null && (forceFullRedraw || document.getElementById('users-list').innerHTML === "")) {
           var html = '';
           allowedUsers.forEach(userId => {
@@ -100,18 +113,18 @@
               <div class="user-row">
                 <div class="user-header" onclick="toggleLogs('${userId}')">
                   <span><strong>${member.fullName}</strong> ${uData.activeStart ? '🟢' : ''}</span>
-                  <span><strong>${formatToHHMM(totalSec)}</strong> ▾</span>
+                  <span><strong>${formatToHM(totalSec)}</strong> ▾</span>
                 </div>
                 <div class="logs-container" id="logs-${userId}" style="display: ${openLogsId === userId ? 'block' : 'none'}">
                   ${(uData.logs || []).map((log, idx) => {
                     var dateStr = new Date(log.date).toLocaleDateString();
-                    var timeStr = (log.duration / 3600).toFixed(2);
+                    var hmStr = formatToHM(log.duration);
                     return `
-                    <div class="log-item" id="log-item-${userId}-${idx}">
-                      <span>${dateStr}: <b id="val-${userId}-${idx}">${formatToHHMM(log.duration)}</b></span>
+                    <div class="log-item">
+                      <span>${dateStr}: <b id="val-${userId}-${idx}">${hmStr}</b></span>
                       ${userId === me ? `
                         <div class="log-controls">
-                          <button onclick="startEdit('${userId}', ${idx}, ${timeStr})">✎</button>
+                          <button onclick="startEdit('${userId}', ${idx}, '${hmStr}')">✎</button>
                           <button onclick="deleteLog(${idx})">✕</button>
                         </div>` : ''}
                     </div>`;
@@ -122,7 +135,6 @@
           document.getElementById('users-list').innerHTML = html;
         }
 
-        // Admin
         if (me === ADMIN_ID && (forceFullRedraw || document.getElementById('members-to-authorize').innerHTML === "")) {
           document.getElementById('admin-section').style.display = 'block';
           var adminHtml = '';
@@ -135,44 +147,36 @@
       });
     }
 
-    window.startEdit = function(userId, idx, currentVal) {
+    window.startEdit = function(userId, idx, currentHM) {
       editingIdx = idx;
       var container = document.getElementById(`val-${userId}-${idx}`);
-      container.innerHTML = `<input type="number" step="0.1" class="edit-input" id="input-${idx}" value="${currentVal}" onblur="cancelEdit()" onkeydown="handleEditKey(event, ${idx})">`;
+      container.innerHTML = `<input type="text" class="edit-input" id="input-${idx}" value="${currentHM}" onblur="cancelEdit()" onkeydown="handleEditKey(event, ${idx})">`;
       document.getElementById(`input-${idx}`).focus();
     };
 
     window.handleEditKey = function(e, idx) {
-      if (e.key === 'Enter') {
-        saveEdit(idx, e.target.value);
-      } else if (e.key === 'Escape') {
-        cancelEdit();
-      }
+      if (e.key === 'Enter') saveEdit(idx, e.target.value);
+      else if (e.key === 'Escape') cancelEdit();
     };
 
     window.saveEdit = function(idx, val) {
-      if (!val || isNaN(val)) return cancelEdit();
+      var seconds = parseToSeconds(val);
+      if (seconds === 0 && val !== "0m") return cancelEdit();
       var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs').then(d => {
-        d[me].logs[idx].duration = Math.round(parseFloat(val) * 3600);
+        d[me].logs[idx].duration = seconds;
         return t.set('card', 'shared', 'workLogs', d);
-      }).then(() => {
-        editingIdx = null;
-        updateUI(true);
-      });
+      }).then(() => { editingIdx = null; updateUI(true); });
     };
 
     window.cancelEdit = function() {
-      setTimeout(() => { // Timeout zabrání konfliktu s redraw
-        editingIdx = null;
-        updateUI(true);
-      }, 150);
+      setTimeout(() => { editingIdx = null; updateUI(true); }, 150);
     };
 
     setInterval(() => updateUI(false), 1000);
 
     window.toggleLogs = function(id) {
-      if (editingIdx !== null) return; // Nedovolit zavření během editace
+      if (editingIdx !== null) return;
       var el = document.getElementById('logs-' + id);
       if (openLogsId === id) { el.style.display = 'none'; openLogsId = null; }
       else {
