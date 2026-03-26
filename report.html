@@ -20,6 +20,31 @@
     .task-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
     .task-name { font-weight: 500; }
     .task-time { font-family: monospace; font-weight: bold; color: #0079bf; }
+    .chart-resizable-container {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    
+    /* Tady je to kouzlo pro tahání za růžek */
+    overflow: hidden; 
+    resize: both; /* Umožní měnit šířku i výšku */
+    min-height: 200px;
+    min-width: 300px;
+    height: 350px; /* Výchozí výška */
+    width: 100%;   /* Výchozí šířka */
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+</style>
+
+<div class="chart-resizable-container">
+  <canvas id="timeChart"></canvas>
+</div>
   </style>
 </head>
 <body>
