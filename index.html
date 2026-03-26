@@ -45,9 +45,9 @@
           var me = t.getContext().member;
           if (!allowed.includes(me)) return null;
           return {
-            title: 'Time Tracking',
+            title: '',
             icon: 'https://cdn.trello.com/images/icons/clock.svg', // Opravená ikona
-            content: { type: 'iframe', url: t.signUrl('./section.html'), height: 400 }
+            content: { type: 'iframe', url: t.signUrl('./section.html'), initialHeight: 46 }
           };
         });
       }
