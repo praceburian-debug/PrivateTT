@@ -48,7 +48,7 @@
           var me = t.getContext().member;
           if (!allowed.includes(me)) return null;
           return {
-            title: '_', // Přidal jsem název, aby Trello mělo validní objekt
+            title: '', // Přidal jsem název, aby Trello mělo validní objekt
             content: {
               type: 'iframe',
               url: t.signUrl('./section.html'),
