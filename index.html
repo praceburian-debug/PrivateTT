@@ -6,8 +6,10 @@
 </head>
 <body>
   <script>
+    // TVOJE KONSTANTA
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
 
+    // TVOJE POMOCNÁ FUNKCE
     function formatToHHMM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
@@ -40,17 +42,48 @@
           return [{ text: formatToHHMM(total), color: active ? 'green' : 'blue' }];
         });
       },
+
       'card-back-section': function(t, options) {
         return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
           var me = t.getContext().member;
           if (!allowed.includes(me)) return null;
           return {
-            title: '',
-            icon: 'https://cdn.trello.com/images/icons/clock.svg', // Opravená ikona
-            content: { type: 'iframe', url: t.signUrl('./section.html'), initialHeight: 46 }
+            title: 'Time Tracker',
+            icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4fc2-880a-504e0e84429a%2Ficon-gray.svg',
+            content: {
+              type: 'iframe',
+              url: t.signUrl('./section.html'),
+              height: 80
+            }
           };
         });
+      },
+
+      // --- TADY JE TA NOVÁ ČÁST PRO REPORTY ---
+      'board-buttons': function(t, options) {
+        var me = t.getContext().member;
+        
+        // Pokud nejsi admin, tlačítko se vůbec nevykreslí
+        if (me !== ADMIN_ID) {
+          return [];
+        }
+
+        return [{
+          icon: {
+            dark: 'https://cdn.trello.com/images/icons/chart.svg',
+            light: 'https://cdn.trello.com/images/icons/chart.svg'
+          },
+          text: 'Reporty času',
+          callback: function(t) {
+            return t.modal({
+              title: "Přehled odpracovaného času",
+              url: './report.html', // Cesta k novému souboru s grafy
+              fullscreen: true
+            });
+          }
+        }];
       }
+      // ----------------------------------------
     });
   </script>
 </body>
