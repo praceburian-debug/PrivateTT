@@ -46,11 +46,13 @@
     'card-back-section': function(t, options) {
   return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
     var me = t.getContext().member;
-    // Pokud jsi admin, uvidíš to vždycky (pojistka)
-    if (me !== ADMIN_ID && !allowed.includes(me)) return null; 
     
+    // Pojistka pro admina + kontrola povolených
+    if (me !== ADMIN_ID && !allowed.includes(me)) return null;
+
     return {
-      title: '', // PRÁZDNÉ - odstraní nápis i mezeru
+      title: '', // PRÁZDNÉ - odstraní ten otravný nápis i čáru
+      icon: './icon.svg', // TATO ŘÁDKA CHYBĚLA A ZPŮSOBOVALA CHYBU
       content: {
         type: 'iframe',
         url: t.signUrl('./section.html'),
