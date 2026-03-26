@@ -9,16 +9,16 @@
 
     /* Hlavní lišta */
     .main-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 0; user-select: none; }
-    .timer-group {
+   .timer-group {
   display: flex;
-  align-items: center; /* Srovná button a text na střed */
+  align-items: center; 
   justify-content: flex-start;
   gap: 12px;
-  height: 44px; /* Fixní výška skupiny */
+  height: 40px; /* Sjednoceno na 40 */
 }
 
 .play-btn { 
-  width: 40px; height: 40px; 
+  width: 40px; height: 40px; /* Stejné jako kontejner */
   border-radius: 50%; border: none; 
   cursor: pointer; 
   display: flex; 
@@ -33,12 +33,13 @@
     .btn-stop { background-color: #eb5a46 !important; }
     .btn-stop::before { content: "■"; font-size: 16px; }
 
- .display-now {
-  font-size: 26px;
-  font-weight: bold;
-  font-family: monospace;
-  margin: 0; /* SMAZAT margin-top: 4px, ten to rozhazoval */
-  line-height: 1; /* Zajistí, že text nebude mít extra místo nahoře/dole */
+.display-now { 
+  font-size: 26px; 
+  font-weight: bold; 
+  font-family: monospace; 
+  line-height: 40px; /* Stejné jako kontejner pro střed */
+  margin: 0;
+  display: block;
 }
 
     /* Fixnutá rotace šipky */
