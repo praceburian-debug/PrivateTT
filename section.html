@@ -4,15 +4,18 @@
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-    body { padding: 8px 12px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); overflow-x: hidden; }
+    /* Odstraníme defaultní marginy těla, aby sizeTo fungovalo přesně */
+    body { margin: 0; padding: 10px 0; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); overflow: hidden; }
     
+    .container { padding: 0 4px; }
+
     /* Hlavní kompaktní lišta */
     .main-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       cursor: pointer;
-      padding: 4px 0;
+      padding: 5px 0;
       user-select: none;
     }
 
@@ -22,84 +25,83 @@
       gap: 12px;
     }
 
-    /* Timer Button */
     .play-btn { 
-      width: 38px; height: 38px; 
+      width: 40px; height: 40px; 
       border-radius: 50%; border: none; 
       cursor: pointer; display: flex; 
       align-items: center; justify-content: center; 
       color: white !important; flex-shrink: 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
       font-size: 0;
     }
     .btn-start { background-color: #00a854 !important; }
-    .btn-start::before { content: "▶"; font-size: 16px; margin-left: 2px; }
+    .btn-start::before { content: "▶"; font-size: 16px; margin-left: 3px; }
     .btn-stop { background-color: #eb5a46 !important; }
     .btn-stop::before { content: "■"; font-size: 18px; }
 
     .display-now { 
-      font-size: 24px; font-weight: bold; font-family: monospace; 
-      color: var(--ds-text, #172b4d); transform: translateY(1px);
+      font-size: 26px; font-weight: bold; font-family: monospace; 
+      color: var(--ds-text, #172b4d); transform: translateY(2px);
     }
 
-    /* Šipka pro rozbalení */
     .chevron {
       font-size: 18px; color: #6b778c; transition: transform 0.2s;
-      padding-right: 5px;
+      padding-right: 10px;
     }
     .chevron.open { transform: rotate(180deg); }
 
     /* Schovaný obsah */
-    #collapsible-content { display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+    #collapsible-content { display: none; margin-top: 15px; border-top: 1px solid var(--ds-border, #eee); padding-top: 10px; }
 
-    /* Seznamy a Logy */
-    .user-row { margin-bottom: 8px; border-bottom: 1px solid #f4f5f7; padding-bottom: 5px; }
-    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 6px; border-radius: 4px; font-size: 13px; }
-    .user-header:hover { background: #ebecf0; }
+    /* Seznamy a uživatelé */
+    .user-row { margin-bottom: 5px; border-bottom: 1px solid #f4f5f7; }
+    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 8px; border-radius: 4px; }
+    .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     
-    .logs-container { display: none; margin-top: 5px; font-size: 12px; padding: 0 8px 10px 15px; }
-    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #eee; }
+    .logs-container { display: none; padding: 5px 10px 15px 15px; font-size: 12px; }
+    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dotted #eee; }
     
-    .log-controls { display: flex; gap: 5px; }
+    .log-controls { display: flex; gap: 8px; }
     .circle-btn {
-      width: 22px; height: 22px; border-radius: 50%; border: none;
+      width: 24px; height: 24px; border-radius: 50%; border: none;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: white !important; font-size: 10px;
+      cursor: pointer; color: white !important; font-size: 11px;
     }
     .btn-edit { background-color: #0079bf !important; }
     .btn-delete { background-color: #eb5a46 !important; }
 
-    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 8px 0; font-size: 11px; font-weight: bold; text-decoration: none; }
+    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 10px 0; font-size: 11px; font-weight: bold; text-decoration: none; }
     .add-manual-btn:hover { text-decoration: underline; }
 
-    .admin-panel { margin-top: 20px; border-top: 2px solid #eee; padding-top: 10px; font-size: 12px; }
-    .admin-title { font-weight: bold; color: #888; margin-bottom: 8px; text-transform: uppercase; font-size: 10px; }
-    
+    .admin-panel { margin-top: 25px; border-top: 2px solid #eee; padding-top: 10px; }
+    .admin-title { font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase; font-size: 10px; }
+    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
+
     /* Switch */
-    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
-    .switch { position: relative; width: 30px; height: 16px; }
+    .switch { position: relative; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px; transition: .4s; }
-    .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .4s; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .4s; }
     input:checked + .slider { background-color: #00a854; }
-    input:checked + .slider:before { transform: translateX(14px); }
+    input:checked + .slider:before { transform: translateX(16px); }
   </style>
 </head>
 <body>
-
-  <div class="main-header" id="header-bar">
-    <div class="timer-group">
-      <button id="main-timer-btn" class="play-btn btn-start"></button>
-      <div id="my-display" class="display-now">00:00:00</div>
+  <div class="container">
+    <div class="main-header" id="header-bar">
+      <div class="timer-group">
+        <button id="main-timer-btn" class="play-btn btn-start"></button>
+        <div id="my-display" class="display-now">00:00:00</div>
+      </div>
+      <div class="chevron" id="main-chevron">▾</div>
     </div>
-    <div class="chevron" id="main-chevron">▾</div>
-  </div>
 
-  <div id="collapsible-content">
-    <div id="users-list"></div>
-    <div id="admin-section" style="display:none;" class="admin-panel">
-      <div class="admin-title">Administrace</div>
-      <div id="members-to-authorize"></div>
+    <div id="collapsible-content">
+      <div id="users-list"></div>
+      <div id="admin-section" style="display:none;" class="admin-panel">
+        <div class="admin-title">Administrace přístupů</div>
+        <div id="members-to-authorize"></div>
+      </div>
     </div>
   </div>
 
@@ -107,16 +109,20 @@
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
     var t = TrelloPowerUp.iframe();
     var openLogsId = null;
-    var editingIdx = null;
     var isExpanded = false;
 
-    // Přepínání rozbalení
+    // Funkce pro automatické přizpůsobení výšky
+    function resize() {
+      t.sizeTo(document.body).catch(function(e){ /* ignore */ });
+    }
+
+    // Přepínání hlavního rozbalení
     document.getElementById('header-bar').onclick = function(e) {
-      if (e.target.closest('#main-timer-btn')) return; // Klik na button nerozbaluje
+      if (e.target.closest('#main-timer-btn')) return;
       isExpanded = !isExpanded;
       document.getElementById('collapsible-content').style.display = isExpanded ? 'block' : 'none';
       document.getElementById('main-chevron').classList.toggle('open', isExpanded);
-      t.sizeTo('#collapsible-content').catch(() => {}); // Resizne iframe
+      resize();
     };
 
     function fTimeFull(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
@@ -146,11 +152,10 @@
         var allLogs = res[0] || {};
         var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
-
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
-        var btn = document.getElementById('main-timer-btn');
         
+        var btn = document.getElementById('main-timer-btn');
         if (myData.activeStart) {
           btn.className = "play-btn btn-stop";
           var sess = Math.floor((Date.now() - myData.activeStart) / 1000);
@@ -160,7 +165,7 @@
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
         }
 
-        if (editingIdx === null && (forceFullRedraw || document.getElementById('users-list').innerHTML === "")) {
+        if (forceFullRedraw || document.getElementById('users-list').innerHTML === "") {
           var html = '';
           allowedUsers.forEach(userId => {
             var member = cardMembers.find(m => m.id === userId);
@@ -176,21 +181,21 @@
                   <span><strong>${formatToHM(totalSec)}</strong> ▾</span>
                 </div>
                 <div class="logs-container" id="logs-${userId}" style="display: ${openLogsId === userId ? 'block' : 'none'}">
-                  <div id="log-list-${userId}">
+                  <div>
                     ${(uData.logs || []).map((log, idx) => `
                       <div class="log-item">
-                        <span>${new Date(log.date).toLocaleDateString()}: <b id="val-${userId}-${idx}">${formatToHM(log.duration)}</b></span>
+                        <span>${new Date(log.date).toLocaleDateString()}: <b>${formatToHM(log.duration)}</b></span>
                         ${userId === me ? `<div class="log-controls">
-                          <button class="circle-btn btn-edit" onclick="startEdit('${userId}', ${idx}, '${formatToHM(log.duration)}')">✎</button>
                           <button class="circle-btn btn-delete" onclick="deleteLog(${idx})">✕</button>
                         </div>` : ''}
                       </div>`).join('')}
                   </div>
-                  ${userId === me ? `<div><button class="add-manual-btn" onclick="showManualInput('${userId}')">+ Přidat manuálně</button></div>` : ''}
+                  ${userId === me ? `<div><button class="add-manual-btn" onclick="showManualInput('${userId}')">+ Přidat záznam</button></div>` : ''}
                 </div>
               </div>`;
           });
           document.getElementById('users-list').innerHTML = html;
+          resize(); // Přizpůsobit po vykreslení seznamu
         }
 
         if (me === ADMIN_ID && (forceFullRedraw || document.getElementById('members-to-authorize').innerHTML === "")) {
@@ -201,6 +206,7 @@
             adminHtml += `<div class="admin-row"><span>${m.fullName}</span><label class="switch"><input type="checkbox" ${isAllowed ? 'checked' : ''} onchange="toggleAccess('${m.id}')"><span class="slider"></span></label></div>`;
           });
           document.getElementById('members-to-authorize').innerHTML = adminHtml;
+          resize();
         }
       });
     }
@@ -220,9 +226,9 @@
     };
 
     window.toggleLogs = function(id) {
-      var el = document.getElementById('logs-' + id);
       openLogsId = (openLogsId === id) ? null : id;
       updateUI(true);
+      setTimeout(resize, 50); // Malá prodleva pro animaci prohlížeče
     };
 
     window.toggleAccess = function(uid) {
@@ -232,8 +238,20 @@
       }).then(() => updateUI(true));
     };
 
+    window.deleteLog = function(idx) {
+      var me = t.getContext().member;
+      if (confirm("Smazat?")) {
+        t.get('card', 'shared', 'workLogs').then(d => {
+          d[me].logs.splice(idx, 1);
+          return t.set('card', 'shared', 'workLogs', d);
+        }).then(() => updateUI(true));
+      }
+    };
+
     setInterval(() => updateUI(false), 1000);
     updateUI(true);
+    // Prvotní resize po načtení
+    setTimeout(resize, 500);
   </script>
 </body>
 </html>
