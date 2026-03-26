@@ -54,9 +54,17 @@
     }
 
     .chevron {
-      font-size: 16px; color: #6b778c; transition: transform 0.2s;
+      font-size: 16px; color: #6b778c; transition: transform 0.2s ease-in-out;
       padding-right: 8px;
-    }
+    /* Klíč k dokonalé rotaci: */
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
+      text-align: center;
+      vertical-align: middle;
+      transform-origin: center center; /* Rotace přesně kolem středu */
+}
     .chevron.open { transform: rotate(180deg); }
 
     /* Schovaný obsah */
