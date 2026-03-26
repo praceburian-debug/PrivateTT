@@ -9,19 +9,39 @@
 
     /* Hlavní lišta */
     .main-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 0; user-select: none; }
-    .timer-group { display: flex; align-items: center; gap: 10px; }
+    .timer-group {
+  display: flex;
+  align-items: center; /* Tohle srovná středy svisle */
+  justify-content: flex-start;
+  gap: 12px;
+  height: 40px; /* Fixní výška pro celou skupinu */
+}
 
-    .play-btn { 
-      width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; 
-      display: flex; align-items: center; justify-content: center; color: white !important; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15); font-size: 0; flex-shrink: 0;
-    }
+.play-btn { 
+  width: 40px; height: 40px; 
+  border-radius: 50%; border: none; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  margin: 0; padding: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  flex-shrink: 0;
+}
     .btn-start { background-color: #00a854 !important; }
     .btn-start::before { content: "▶"; font-size: 14px; margin-left: 2px; }
     .btn-stop { background-color: #eb5a46 !important; }
     .btn-stop::before { content: "■"; font-size: 16px; }
 
-    .display-now { font-size: 22px; font-weight: bold; font-family: monospace; transform: translateY(1px); }
+   .display-now { 
+  font-size: 26px; 
+  font-weight: bold; 
+  font-family: monospace; 
+  color: var(--ds-text, #172b4d);
+  line-height: 40px; /* Stejná výška jako button pro dokonalý střed */
+  margin: 0;
+  display: block;
+}
 
     /* Fixnutá rotace šipky */
     .chevron {
