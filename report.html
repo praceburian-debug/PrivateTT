@@ -6,145 +6,134 @@
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Použití Trello proměnných pro automatický Dark Mode */
-    body { 
-      padding: 20px; 
-      background-color: var(--ds-background-neutral, #f4f5f7); 
-      color: var(--ds-text, #172b4d);
-      font-family: sans-serif; 
+    :root {
+      --bg-panel: var(--ds-background-section, #ffffff);
+      --bg-body: var(--ds-background-neutral, #f4f5f7);
+      --text-main: var(--ds-text, #172b4d);
+      --border-color: var(--ds-border, #dfe1e6);
     }
+    body { padding: 20px; background-color: var(--bg-body); color: var(--text-main); font-family: sans-serif; margin: 0; }
+    
+    /* Filtrace nahoře */
     .controls { 
-      display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px; 
-      background: var(--ds-background-section, white); 
-      padding: 15px; border-radius: 8px; flex-wrap: wrap; 
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      display: flex; gap: 15px; background: var(--bg-panel); padding: 15px; 
+      border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-top: 4px solid #5794F2; /* Barva z tvého Sheets */
     }
     .control-group { display: flex; flex-direction: column; gap: 4px; }
-    label { font-weight: bold; font-size: 11px; color: var(--ds-text-subtle, #5e6c84); }
-    
-    select, input { 
-      border: 1px solid var(--ds-border, #dfe1e6); 
-      background: var(--ds-background-input, white);
-      color: var(--ds-text, #172b4d);
-      padding: 6px; border-radius: 3px; font-size: 13px; 
-    }
-    
-    .chart-resizable-container {
-      background: var(--ds-background-section, white);
-      padding: 15px; border-radius: 8px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-      overflow: hidden; resize: both; 
-      min-height: 250px; height: 350px; width: 100%;
-    }
+    label { font-weight: bold; font-size: 11px; text-transform: uppercase; color: var(--ds-text-subtle, #5e6c84); }
+    select, input { border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; background: var(--ds-background-input, white); color: var(--text-main); }
 
-    .summary-box { 
-      background: var(--ds-background-section, white); 
-      padding: 15px; border-radius: 8px; 
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
-    }
-    .task-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--ds-border, #eee); }
-    .task-time { font-family: monospace; font-weight: bold; color: var(--ds-text-brand, #0079bf); }
+    /* Dashboard layout */
+    .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .chart-card { background: var(--bg-panel); padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: 320px; }
+    
+    /* Tabulka "Marast" vlevo */
+    .table-container { background: var(--bg-panel); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #5794F2; color: white; text-align: left; padding: 12px; }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+    tr:nth-child(even) { background: var(--ds-background-neutral-subtle, #f9f9f9); }
+    .time-cell { font-family: monospace; font-weight: bold; text-align: right; }
   </style>
 </head>
 <body>
 
   <div class="controls">
-    <div class="control-group">
-      <label>Období</label>
-      <select id="range-select" onchange="toggleCustomDates()">
-        <option value="today">Dnes</option>
-        <option value="week">Tento týden</option>
-        <option value="month" selected>Tento měsíc</option>
-        <option value="custom">Vlastní...</option>
-      </select>
-    </div>
-    <div id="custom-dates" style="display:none; gap:5px;"><input type="date" id="date-from"><input type="date" id="date-to"></div>
-    <div class="control-group">
-      <label>Člen</label>
-      <select id="member-select"><option value="all">Všichni</option></select>
-    </div>
-    <div class="control-group">
-      <label>Task</label>
-      <select id="task-select"><option value="all">Všechny aktivní tasky</option></select>
-    </div>
-    <button class="mod-primary" onclick="loadAndRender()">Aktualizovat</button>
+    <div class="control-group"><label>Období</label><select id="range-select" onchange="loadAndRender()"><option value="month">Tento měsíc</option><option value="week">Tento týden</option><option value="today">Dnes</option></select></div>
+    <div class="control-group"><label>Člen</label><select id="member-select" onchange="loadAndRender()"><option value="all">Všichni</option></select></div>
+    <button class="mod-primary" style="align-self: flex-end; height: 36px;" onclick="loadAndRender()">Aktualizovat</button>
   </div>
 
-  <div class="chart-resizable-container" id="chart-container">
-    <canvas id="timeChart"></canvas>
+  <div class="dashboard-grid">
+    <div class="chart-card"><canvas id="taskChart"></canvas></div>
+    <div class="chart-card"><canvas id="peopleChart"></canvas></div>
   </div>
 
-  <div class="summary-box" id="summary">
-    <h4 style="margin-top:0">Souhrn podle tasků (celkový čas týmu)</h4>
-    <div id="summary-list"></div>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>Task (Karta)</th><th>Pracovník</th><th style="text-align:right">Hodiny</th></tr></thead>
+      <tbody id="pivot-body"></tbody>
+    </table>
   </div>
 
   <script>
     var t = TrelloPowerUp.iframe();
-    var chart;
-    
-    // Detekce barev pro graf podle režimu
-    function getChartTheme() {
+    var taskChart, peopleChart;
+    const COLORS = ['#5794F2', '#60C6D2', '#FFAB46', '#FF5B57', '#9469D6', '#00A854'];
+
+    function getTheme() {
       const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      return {
-        text: isDark ? '#b6c2cf' : '#172b4d',
-        grid: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-      };
+      return { text: isDark ? '#b6c2cf' : '#172b4d', grid: isDark ? '#333' : '#eee' };
     }
 
-    const COLOR_PALETTE = ['#5794F2', '#60C6D2', '#FFAB46', '#FF5B57', '#9469D6', '#00A854'];
+    async function loadAndRender() {
+      const theme = getTheme();
+      const range = document.getElementById('range-select').value;
+      const selMember = document.getElementById('member-select').value;
+      
+      const cards = await t.cards('all');
+      const boardMembers = (await t.board('members')).members || [];
+      
+      if (document.getElementById('member-select').options.length === 1) {
+        boardMembers.forEach(m => document.getElementById('member-select').add(new Option(m.fullName, m.id)));
+      }
 
-    // ... (Logika načítání a ResizeObserveru zůstává stejná jako v předchozím kroku) ...
+      let dataPoints = []; // Pro tabulku
+      let taskTotals = {}; // Pro sloupcový graf
+      let peopleTotals = {}; // Pro koláč
 
-    function renderUI(stats) {
-      const labels = [];
-      const data = [];
-      const theme = getChartTheme();
-      const summaryList = document.getElementById('summary-list');
-      summaryList.innerHTML = '';
+      // Tady probíhá výpočet dat (zjednodušeno pro ukázku)
+      for (let card of cards) {
+        const logs = await t.get(card.id, 'shared', 'workLogs', {});
+        for (let uid in logs) {
+          if (selMember !== 'all' && uid !== selMember) continue;
+          const m = boardMembers.find(bm => bm.id === uid);
+          const userName = m ? m.fullName : 'Neznámý';
+          
+          (logs[uid].logs || []).forEach(l => {
+            const h = l.duration / 3600;
+            dataPoints.push({ task: card.name, user: userName, hours: h });
+            taskTotals[card.name] = (taskTotals[card.name] || 0) + h;
+            peopleTotals[userName] = (peopleTotals[userName] || 0) + h;
+          });
+        }
+      }
 
-      Object.values(stats).forEach((item) => {
-        labels.push(item.name.length > 25 ? item.name.substring(0, 25) + '...' : item.name);
-        const hours = (item.total / 3600).toFixed(2);
-        data.push(hours);
-        summaryList.innerHTML += `<div class="task-row"><span>${item.name}</span><span class="task-time">${hours} h</span></div>`;
+      updatePivotTable(dataPoints);
+      renderCharts(taskTotals, peopleTotals, theme);
+    }
+
+    function updatePivotTable(data) {
+      const body = document.getElementById('pivot-body');
+      body.innerHTML = data.map(d => `<tr><td>${d.task}</td><td>${d.user}</td><td class="time-cell">${d.hours.toFixed(2)} h</td></tr>`).join('');
+    }
+
+    function renderCharts(tasks, people, theme) {
+      if (taskChart) taskChart.destroy();
+      if (peopleChart) peopleChart.destroy();
+
+      taskChart = new Chart(document.getElementById('taskChart'), {
+        type: 'bar',
+        data: { labels: Object.keys(tasks), datasets: [{ data: Object.values(tasks), backgroundColor: COLORS[0] }] },
+        options: { 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: false }, title: { display: true, text: 'HODINY NA TASKY', color: theme.text } },
+          scales: { y: { grid: { color: theme.grid }, ticks: { color: theme.text } }, x: { ticks: { color: theme.text } } }
+        }
       });
 
-      const ctx = document.getElementById('timeChart').getContext('2d');
-      if (chart) chart.destroy();
-      
-      chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{ 
-            data: data, 
-            backgroundColor: COLOR_PALETTE,
-            borderRadius: 4
-          }]
-        },
+      peopleChart = new Chart(document.getElementById('peopleChart'), {
+        type: 'doughnut',
+        data: { labels: Object.keys(people), datasets: [{ data: Object.values(people), backgroundColor: COLORS }] },
         options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { 
-            y: { 
-              beginAtZero: true,
-              grid: { color: theme.grid },
-              ticks: { color: theme.text }
-            },
-            x: {
-              grid: { display: false },
-              ticks: { color: theme.text }
-            }
-          }
+          maintainAspectRatio: false, 
+          plugins: { legend: { position: 'bottom', labels: { color: theme.text } }, title: { display: true, text: 'VYTÍŽENÍ LIDÍ', color: theme.text } }
         }
       });
     }
 
-    // Ostatní pomocné funkce (getTimeRange, loadAndRender atd.) zůstávají stejné...
-    // [Vlož sem zbytek JS kódu z předchozí odpovědi]
+    t.render(() => loadAndRender());
   </script>
 </body>
 </html>
