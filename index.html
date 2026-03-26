@@ -43,20 +43,22 @@
         });
       },
 
-     'card-back-section': function(t, options) {
-        return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
-          var me = t.getContext().member;
-          if (!allowed.includes(me)) return null;
-          return {
-            title: '', // Přidal jsem název, aby Trello mělo validní objekt
-            content: {
-              type: 'iframe',
-              url: t.signUrl('./section.html'),
-              height: 80
-            }
-          };
-        });
-      },
+    'card-back-section': function(t, options) {
+  return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
+    var me = t.getContext().member;
+    // Pokud jsi admin, uvidíš to vždycky (pojistka)
+    if (me !== ADMIN_ID && !allowed.includes(me)) return null; 
+    
+    return {
+      title: '', // PRÁZDNÉ - odstraní nápis i mezeru
+      content: {
+        type: 'iframe',
+        url: t.signUrl('./section.html'),
+        initialHeight: 44 // Sladěno s výškou v section.html
+      }
+    };
+  });
+},
 
       'board-buttons': function(t, options) {
         var me = t.getContext().member;
