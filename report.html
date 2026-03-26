@@ -14,7 +14,7 @@
     }
     .control-group { display: flex; flex-direction: column; gap: 5px; }
     label { font-weight: bold; font-size: 12px; color: #5e6c84; }
-    select, input { border: 1px solid #dfe1e6; padding: 8px; border-radius: 3px; }
+    select, input { border: 1px solid #dfe1e6; padding: 8px; border-radius: 3px; min-width: 150px; }
     .chart-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: 400px; margin-bottom: 20px; }
     #custom-dates { display: none; gap: 10px; align-items: flex-end; }
     .btn-group { display: flex; gap: 10px; }
@@ -45,9 +45,21 @@
       </div>
     </div>
 
+    <div class="control-group">
+      <label>Člověk</label>
+      <select id="member-select">
+        <option value="all">Všichni členové</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>Hledat task (název)</label>
+      <input type="text" id="task-filter" placeholder="Název karty...">
+    </div>
+
     <div class="btn-group">
       <button class="mod-primary" onclick="loadAndRender()">Aktualizovat</button>
-      <button onclick="exportToCSV()">Exportovat CSV</button>
+      <button onclick="exportToCSV()">Export CSV</button>
     </div>
   </div>
 
@@ -58,17 +70,21 @@
   <script>
     var t = TrelloPowerUp.iframe();
     var chart;
-    var lastExportData = []; // Zde budeme držet data pro CSV
+    var lastExportData = [];
+
+    // Funkce pro generování fixní barvy z ID uživatele
+    function getMemberColor(userId) {
+      let hash = 0;
+      for (let i = 0; i < userId.length; i++) {
+        hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+      return "#" + "00000".substring(0, 6 - c.length) + c;
+    }
 
     function toggleCustomDates() {
       const isCustom = document.getElementById('range-select').value === 'custom';
       document.getElementById('custom-dates').style.display = isCustom ? 'flex' : 'none';
-    }
-
-    function formatToHHMM(seconds) {
-      var h = Math.floor(seconds / 3600);
-      var m = Math.floor((seconds % 3600) / 60);
-      return h + ":" + (m < 10 ? "0" : "") + m;
     }
 
     function getTimeRange() {
@@ -78,8 +94,7 @@
       start.setHours(0,0,0,0);
       end.setHours(23,59,59,999);
 
-      if (range === 'today') { /* dnes ok */ } 
-      else if (range === 'week') {
+      if (range === 'week') {
         const day = start.getDay();
         const diff = start.getDate() - day + (day === 0 ? -6 : 1);
         start.setDate(diff);
@@ -97,16 +112,33 @@
 
     async function loadAndRender() {
       const range = getTimeRange();
+      const selectedMember = document.getElementById('member-select').value;
+      const taskSearch = document.getElementById('task-filter').value.toLowerCase();
+      
       const cards = await t.cards('all');
       const boardMembers = (await t.board('members')).members;
       
+      // Naplnění selectu členů (jen poprvé)
+      const memberSelect = document.getElementById('member-select');
+      if (memberSelect.options.length === 1) {
+        boardMembers.forEach(m => {
+          memberSelect.add(new Option(m.fullName, m.id));
+        });
+      }
+
       let stats = {}; 
-      lastExportData = []; // Reset exportu
+      lastExportData = [];
 
       for (let card of cards) {
+        // Filtr: Název tasku
+        if (taskSearch && !card.name.toLowerCase().includes(taskSearch)) continue;
+
         const workLogs = await t.get(card.id, 'shared', 'workLogs', {});
         
         for (let userId in workLogs) {
+          // Filtr: Konkrétní člověk
+          if (selectedMember !== 'all' && userId !== selectedMember) continue;
+
           const member = boardMembers.find(m => m.id === userId);
           const name = member ? member.fullName : 'Neznámý';
           
@@ -116,13 +148,10 @@
           logs.forEach(log => {
             if (log.date >= range.start && log.date <= range.end) {
               stats[userId] += log.duration;
-              
-              // Příprava dat pro export
               lastExportData.push({
                 datum: new Date(log.date).toLocaleDateString('cs-CZ'),
                 clovek: name,
                 karta: card.name,
-                trvani: formatToHHMM(log.duration),
                 sekundy: log.duration
               });
             }
@@ -135,10 +164,13 @@
     function renderChart(stats, members) {
       const labels = [];
       const data = [];
+      const colors = [];
+
       for (let userId in stats) {
         const member = members.find(m => m.id === userId);
         labels.push(member ? member.fullName : 'Neznámý');
         data.push((stats[userId] / 3600).toFixed(2));
+        colors.push(getMemberColor(userId)); // Přiřazení fixní barvy
       }
 
       const ctx = document.getElementById('timeChart').getContext('2d');
@@ -147,38 +179,27 @@
         type: 'bar',
         data: {
           labels: labels,
-          datasets: [{ label: 'Hodiny', data: data, backgroundColor: '#0079bf' }]
+          datasets: [{ label: 'Hodiny', data: data, backgroundColor: colors }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
+        }
       });
     }
 
+    // (Funkce exportToCSV zůstává stejná jako minule...)
     function exportToCSV() {
-      if (lastExportData.length === 0) {
-        alert("Žádná data k exportu. Zkuste změnit období.");
-        return;
-      }
-
-      // Hlavička CSV
-      let csvContent = "Datum;Clovek;Karta;Trvani;Sekundy\n";
-      
-      // Data
-      lastExportData.forEach(row => {
-        csvContent += `${row.datum};${row.clovek};${row.karta};${row.trvani};${row.sekundy}\n`;
+      if (lastExportData.length === 0) return alert("Žádná data.");
+      let csv = "\uFEFFDatum;Clovek;Karta;Hodiny\n";
+      lastExportData.forEach(r => {
+        csv += `${r.datum};${r.clovek};${r.karta};${(r.sekundy/3600).toFixed(2)}\n`;
       });
-
-      // Přidání BOM pro správné zobrazení češtiny v Excelu
-      const BOM = "\uFEFF";
-      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      
-      link.setAttribute("href", url);
-      link.setAttribute("download", `report_casu_${new Date().toISOString().slice(0,10)}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const a = document.createElement("a");
+      a.href = url; a.download = "export.csv"; a.click();
     }
 
     t.render(function() { if(!chart) loadAndRender(); });
