@@ -9,12 +9,10 @@
     .my-timer-card { background: var(--ds-background-neutral, #f4f5f7); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--ds-border, #ccc); text-align: center; }
     .user-timer { font-size: 32px; font-weight: bold; margin-bottom: 10px; font-family: monospace; }
     
-    /* Seznam uživatelů */
     .user-row { margin-bottom: 8px; border-bottom: 1px solid var(--ds-border, #eee); padding-bottom: 5px; }
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     
-    /* Historie */
     .logs-container { display: none; margin-top: 5px; font-size: 12px; background: #f9f9f9; padding: 8px; border-radius: 4px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dotted #ddd; }
     .log-controls button { padding: 0 5px; font-size: 10px; cursor: pointer; margin-left: 3px; background: white; border: 1px solid #ccc; }
@@ -22,13 +20,14 @@
     /* Admin sekce */
     .admin-panel { margin-top: 25px; border-top: 2px solid #eee; padding-top: 10px; }
     .admin-title { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 10px; letter-spacing: 1px; }
-    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 13px; }
+    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
     
-    /* True/False statusy */
-    .status-toggle { cursor: pointer; font-weight: bold; text-decoration: underline; font-family: monospace; }
-    .status-true { color: #00a854; }
-    .status-false { color: #f5222d; }
-    
+    /* Stylovaný checkbox */
+    .admin-check { width: 18px; height: 18px; cursor: pointer; accent-color: #00a854; }
+    .status-label { font-weight: bold; font-size: 10px; margin-right: 8px; vertical-align: middle; }
+    .text-true { color: #00a854; }
+    .text-false { color: #f5222d; }
+
     button.mod-primary { width: 100%; padding: 10px; font-weight: bold; }
   </style>
 </head>
@@ -74,9 +73,9 @@
 
         document.getElementById('status').textContent = "Uživatel: " + me;
 
-        // Timer
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
+        
         if (myData.activeStart) {
           document.getElementById('start-btn').style.display = 'none';
           document.getElementById('stop-btn').style.display = 'block';
@@ -88,7 +87,6 @@
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
         }
 
-        // Seznam (Redraw jen při změně)
         if (forceFullRedraw || document.getElementById('users-list').innerHTML === "") {
           var html = '';
           allowedUsers.forEach(userId => {
@@ -110,14 +108,13 @@
                       <span>${new Date(log.date).toLocaleDateString()}: ${formatToHHMM(log.duration)}</span>
                       ${userId === me ? `<div class="log-controls"><button onclick="editLog(${idx})">✎</button><button onclick="deleteLog(${idx})">✕</button></div>` : ''}
                     </div>
-                  `).join('') || '<div style="opacity:0.5">Žádné záznamy</div>'}
+                  `).join('') || '<div style="opacity:0.5">Bez historie</div>'}
                 </div>
               </div>`;
           });
           document.getElementById('users-list').innerHTML = html;
         }
 
-        // Admin (Redraw jen při změně)
         if (me === ADMIN_ID && (forceFullRedraw || document.getElementById('members-to-authorize').innerHTML === "")) {
           document.getElementById('admin-section').style.display = 'block';
           var adminHtml = '';
@@ -126,9 +123,10 @@
             adminHtml += `
               <div class="admin-row">
                 <span>${m.fullName}</span>
-                <span class="status-toggle ${isAllowed ? 'status-true' : 'status-false'}" onclick="toggleAccess('${m.id}')">
-                  ${isAllowed ? 'TRUE' : 'FALSE'}
-                </span>
+                <div style="display:flex; align-items:center;">
+                  <span class="status-label ${isAllowed ? 'text-true' : 'text-false'}">${isAllowed ? 'POVOLEN' : 'ZAKÁZÁN'}</span>
+                  <input type="checkbox" class="admin-check" ${isAllowed ? 'checked' : ''} onchange="toggleAccess('${m.id}')">
+                </div>
               </div>`;
           });
           document.getElementById('members-to-authorize').innerHTML = adminHtml;
