@@ -11,10 +11,10 @@
     .main-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 0; user-select: none; }
     .timer-group {
   display: flex;
-  align-items: center; /* Tohle srovná středy svisle */
+  align-items: center; /* Srovná button a text na střed */
   justify-content: flex-start;
   gap: 12px;
-  height: 40px; /* Fixní výška pro celou skupinu */
+  height: 44px; /* Fixní výška skupiny */
 }
 
 .play-btn { 
@@ -33,14 +33,12 @@
     .btn-stop { background-color: #eb5a46 !important; }
     .btn-stop::before { content: "■"; font-size: 16px; }
 
-   .display-now { 
-  font-size: 26px; 
-  font-weight: bold; 
-  font-family: monospace; 
-  color: var(--ds-text, #172b4d);
-  line-height: 40px; /* Stejná výška jako button pro dokonalý střed */
-  margin: 0;
-  display: block;
+ .display-now {
+  font-size: 26px;
+  font-weight: bold;
+  font-family: monospace;
+  margin: 0; /* SMAZAT margin-top: 4px, ten to rozhazoval */
+  line-height: 1; /* Zajistí, že text nebude mít extra místo nahoře/dole */
 }
 
     /* Fixnutá rotace šipky */
