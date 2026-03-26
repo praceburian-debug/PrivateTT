@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { padding: 20px; background: #f4f5f7; }
+    .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; background: white; padding: 15px; border-radius: 8px; }
+    .chart-container { background: white; padding: 20px; border-radius: 8px; height: 400px; }
+    select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="filters">
+    <select id="filter-member"><option value="all">Všichni lidé</option></select>
+    <select id="filter-range">
+      <option value="today">Dnes</option>
+      <option value="week">Tento týden</option>
+      <option value="month" selected>Tento měsíc</option>
+      <option value="custom">Vlastní rozsah...</option>
+    </select>
+    <div id="custom-date-pickers" style="display:none;">
+      <input type="date" id="date-from">
+      <input type="date" id="date-to">
+    </div>
+    <button class="mod-primary" onclick="loadData()">Aktualizovat</button>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="myChart"></canvas>
+  </div>
+
+  <script>
+    var t = TrelloPowerUp.iframe();
+    var ctx = document.getElementById('myChart').getContext('2d');
+    var chart;
+
+    // Načtení dat ze všech karet na aktuální nástěnce
+    async function loadData() {
+      const cards = await t.cards('all'); // Získáme všechny karty na boardu
+      const boardMembers = await t.board('members');
+      
+      // Naplnění filtru členů (pokud je prázdný)
+      const memberSelect = document.getElementById('filter-member');
+      if(memberSelect.options.length <= 1) {
+        boardMembers.members.forEach(m => {
+          let opt = new Option(m.fullName, m.id);
+          memberSelect.add(opt);
+        });
+      }
+
+      let aggregatedData = {}; // Struktura: { userId: totalSeconds }
+
+      // Projdeme všechny karty a vytáhneme workLogs
+      for (const card of cards) {
+        const logs = await t.get(card.id, 'shared', 'workLogs', {});
+        
+        for (const userId in logs) {
+          if (!aggregatedData[userId]) aggregatedData[userId] = 0;
+          
+          const userLogs = logs[userId].logs || [];
+          userLogs.forEach(log => {
+            // Tady by přišla logika filtru podle data (log.date)
+            aggregatedData[userId] += log.duration;
+          });
+        }
+      }
+
+      renderChart(aggregatedData, boardMembers.members);
+    }
+
+    function renderChart(data, members) {
+      const labels = [];
+      const values = [];
+
+      for (const userId in data) {
+        const member = members.find(m => m.id === userId);
+        labels.push(member ? member.fullName : 'Neznámý');
+        values.push(data[userId] / 3600); // Převod na hodiny
+      }
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Odpracované hodiny',
+            data: values,
+            backgroundColor: '#0079bf'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    t.render(function() { loadData(); });
+  </script>
+</body>
+</html>
