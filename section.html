@@ -4,121 +4,126 @@
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-body { padding: 12px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
+    /* Odstraníme defaultní marginy těla, aby sizeTo fungovalo přesně */
+    body { margin: 0; padding: 10px 0; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); overflow: hidden; }
+    
+    .container { padding: 0 4px; }
 
-/* Horní řádek - Zarovnání vlevo a svisle na střed */
-.timer-row { 
-  display: flex; 
-  align-items: center; 
-  justify-content: flex-start; 
-  gap: 15px; 
-  margin-bottom: 30px; 
-  padding: 5px 0; 
-}
+    /* Hlavní kompaktní lišta */
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 5px 0;
+      user-select: none;
+    }
 
-/* Hlavní button - Reset všeho pro dokonalý střed */
-.play-btn { 
-  width: 44px; height: 44px; 
-  border-radius: 50%; border: none; 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  color: 242528 !important; 
-  flex-shrink: 0;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  padding: 0;
-  margin: 0;
-  line-height: 1;
-  font-size: 0; /* Skryje text z JS, použijeme ikony níže */
-}
+    .timer-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-/* Ikony v buttonu přes pseudo-elementy pro absolutní kontrolu */
-.btn-start { background-color: #00a854 !important; }
-.btn-start::before { 
-  content: "▶"; 
-  font-size: 18px; 
-  margin-left: 3px; /* Optický posun trojúhelníku doprava */
-}
+    .play-btn { 
+      width: 40px; height: 40px; 
+      border-radius: 50%; border: none; 
+      cursor: pointer; display: flex; 
+      align-items: center; justify-content: center; 
+      color: white !important; flex-shrink: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      font-size: 0;
+    }
+    .btn-start { background-color: #00a854 !important; }
+    .btn-start::before { content: "▶"; font-size: 16px; margin-left: 3px; }
+    .btn-stop { background-color: #eb5a46 !important; }
+    .btn-stop::before { content: "■"; font-size: 18px; }
 
-.btn-stop { background-color: #ff0033 !important; }
-.btn-stop::before { 
-  content: "■"; 
-  font-size: 20px; 
-  margin-left: 0; 
-}
+    .display-now { 
+      font-size: 26px; font-weight: bold; font-family: monospace; 
+      color: var(--ds-text, #172b4d); transform: translateY(2px);
+    }
 
-/* Časový displej - svislý posun pro oko */
-.display-now { 
-  font-size: 30px; 
-  font-weight: bold; 
-  font-family: monospace; 
-  color: var(--ds-text, #172b4d);
-  line-height: 1;
-  transform: translateY(2px); /* Jemný posun dolů, aby seděl na ose s buttonem */
-  display: inline-block;
-}
+    .chevron {
+      font-size: 18px; color: #6b778c; transition: transform 0.2s;
+      padding-right: 10px;
+    }
+    .chevron.open { transform: rotate(180deg); }
 
-/* Efekty */
-.play-btn:hover { opacity: 0.9; }
-.play-btn:active { transform: scale(0.9); }
+    /* Schovaný obsah */
+    #collapsible-content { display: none; margin-top: 15px; border-top: 1px solid var(--ds-border, #eee); padding-top: 10px; }
 
-/* Seznamy uživatelů a logy */
-.user-row { margin-bottom: 8px; border-bottom: 1px solid var(--ds-border, #eee); padding-bottom: 5px; }
-.user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 8px; border-radius: 4px; }
-.user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
+    /* Seznamy a uživatelé */
+    .user-row { margin-bottom: 5px; border-bottom: 1px solid #f4f5f7; }
+    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 8px; border-radius: 4px; }
+    .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
+    
+    .logs-container { display: none; padding: 5px 10px 15px 15px; font-size: 12px; }
+    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dotted #eee; }
+    
+    .log-controls { display: flex; gap: 8px; }
+    .circle-btn {
+      width: 24px; height: 24px; border-radius: 50%; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: white !important; font-size: 11px;
+    }
+    .btn-edit { background-color: #0079bf !important; }
+    .btn-delete { background-color: #eb5a46 !important; }
 
-.logs-container { display: none; margin-top: 5px; font-size: 12px; padding: 0 8px 10px 15px; }
-.log-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dotted #eee; color: #5e6c84; }
+    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 10px 0; font-size: 11px; font-weight: bold; text-decoration: none; }
+    .add-manual-btn:hover { text-decoration: underline; }
 
-/* Kulatá barevná tlačítka v historii (tvá oblíbená část) */
-.log-controls { display: flex; gap: 6px; }
-.circle-btn {
-  width: 26px; height: 26px;
-  border-radius: 50%; border: none;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: white !important; font-size: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-}
-.btn-edit { background-color: #9933ff !important; }
-.btn-delete { background-color: #ff0033 !important; }
+    .admin-panel { margin-top: 25px; border-top: 2px solid #eee; padding-top: 10px; }
+    .admin-title { font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase; font-size: 10px; }
+    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
 
-/* Ostatní prvky */
-.add-manual-btn { background: none; border: none; color: #9933ff; cursor: pointer; padding: 12px 0; font-size: 11px; font-weight: bold; text-decoration: none; }
-.edit-input { width: 95px; padding: 4px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
-
-/* Admin Switch */
-.admin-panel { margin-top: 30px; border-top: 2px solid #eee; padding-top: 15px; }
-.admin-title { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 12px; text-transform: uppercase; }
-.admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; }
-.switch { position: relative; display: inline-block; width: 34px; height: 20px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-input:checked + .slider { background-color: #00a854; }
-input:checked + .slider:before { transform: translateX(14px); }
+    /* Switch */
+    .switch { position: relative; width: 34px; height: 18px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px; transition: .4s; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .4s; }
+    input:checked + .slider { background-color: #00a854; }
+    input:checked + .slider:before { transform: translateX(16px); }
   </style>
 </head>
 <body>
-  
-  <div class="timer-row">
-    <button id="main-timer-btn" class="play-btn btn-start">▶</button>
-    <div id="my-display" class="display-now">00:00:00</div>
-  </div>
+  <div class="container">
+    <div class="main-header" id="header-bar">
+      <div class="timer-group">
+        <button id="main-timer-btn" class="play-btn btn-start"></button>
+        <div id="my-display" class="display-now">00:00:00</div>
+      </div>
+      <div class="chevron" id="main-chevron">▾</div>
+    </div>
 
-  <div id="users-list"></div>
-
-  <div id="admin-section" style="display:none;" class="admin-panel">
-    <div class="admin-title">Administrace přístupů</div>
-    <div id="members-to-authorize"></div>
+    <div id="collapsible-content">
+      <div id="users-list"></div>
+      <div id="admin-section" style="display:none;" class="admin-panel">
+        <div class="admin-title">Administrace přístupů</div>
+        <div id="members-to-authorize"></div>
+      </div>
+    </div>
   </div>
 
   <script>
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
     var t = TrelloPowerUp.iframe();
     var openLogsId = null;
-    var editingIdx = null;
-    var isAddingManual = false;
+    var isExpanded = false;
+
+    // Funkce pro automatické přizpůsobení výšky
+    function resize() {
+      t.sizeTo(document.body).catch(function(e){ /* ignore */ });
+    }
+
+    // Přepínání hlavního rozbalení
+    document.getElementById('header-bar').onclick = function(e) {
+      if (e.target.closest('#main-timer-btn')) return;
+      isExpanded = !isExpanded;
+      document.getElementById('collapsible-content').style.display = isExpanded ? 'block' : 'none';
+      document.getElementById('main-chevron').classList.toggle('open', isExpanded);
+      resize();
+    };
 
     function fTimeFull(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
     function formatToHM(seconds) {
@@ -147,21 +152,20 @@ input:checked + .slider:before { transform: translateX(14px); }
         var allLogs = res[0] || {};
         var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
-
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
-        var btn = document.getElementById('main-timer-btn');
         
+        var btn = document.getElementById('main-timer-btn');
         if (myData.activeStart) {
-          btn.innerHTML = "■"; btn.className = "play-btn btn-stop";
+          btn.className = "play-btn btn-stop";
           var sess = Math.floor((Date.now() - myData.activeStart) / 1000);
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal + sess);
         } else {
-          btn.innerHTML = "▶"; btn.className = "play-btn btn-start";
+          btn.className = "play-btn btn-start";
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
         }
 
-        if (editingIdx === null && !isAddingManual && (forceFullRedraw || document.getElementById('users-list').innerHTML === "")) {
+        if (forceFullRedraw || document.getElementById('users-list').innerHTML === "") {
           var html = '';
           allowedUsers.forEach(userId => {
             var member = cardMembers.find(m => m.id === userId);
@@ -177,22 +181,21 @@ input:checked + .slider:before { transform: translateX(14px); }
                   <span><strong>${formatToHM(totalSec)}</strong> ▾</span>
                 </div>
                 <div class="logs-container" id="logs-${userId}" style="display: ${openLogsId === userId ? 'block' : 'none'}">
-                  <div id="log-list-${userId}">
+                  <div>
                     ${(uData.logs || []).map((log, idx) => `
                       <div class="log-item">
-                        <span>${new Date(log.date).toLocaleDateString()}: <b id="val-${userId}-${idx}">${formatToHM(log.duration)}</b></span>
-                        ${userId === me ? `
-                        <div class="log-controls">
-                          <button class="circle-btn btn-edit" onclick="startEdit('${userId}', ${idx}, '${formatToHM(log.duration)}')">✎</button>
+                        <span>${new Date(log.date).toLocaleDateString()}: <b>${formatToHM(log.duration)}</b></span>
+                        ${userId === me ? `<div class="log-controls">
                           <button class="circle-btn btn-delete" onclick="deleteLog(${idx})">✕</button>
                         </div>` : ''}
                       </div>`).join('')}
                   </div>
-                  ${userId === me ? `<div id="manual-area-${userId}"><button class="add-manual-btn" onclick="showManualInput('${userId}')">+ Přidat záznam manuálně</button></div>` : ''}
+                  ${userId === me ? `<div><button class="add-manual-btn" onclick="showManualInput('${userId}')">+ Přidat záznam</button></div>` : ''}
                 </div>
               </div>`;
           });
           document.getElementById('users-list').innerHTML = html;
+          resize(); // Přizpůsobit po vykreslení seznamu
         }
 
         if (me === ADMIN_ID && (forceFullRedraw || document.getElementById('members-to-authorize').innerHTML === "")) {
@@ -203,6 +206,7 @@ input:checked + .slider:before { transform: translateX(14px); }
             adminHtml += `<div class="admin-row"><span>${m.fullName}</span><label class="switch"><input type="checkbox" ${isAllowed ? 'checked' : ''} onchange="toggleAccess('${m.id}')"><span class="slider"></span></label></div>`;
           });
           document.getElementById('members-to-authorize').innerHTML = adminHtml;
+          resize();
         }
       });
     }
@@ -212,8 +216,7 @@ input:checked + .slider:before { transform: translateX(14px); }
       t.get('card', 'shared', 'workLogs', {}).then(data => {
         if (!data[me]) data[me] = { activeStart: null, logs: [] };
         if (data[me].activeStart) {
-          var duration = Math.floor((Date.now() - data[me].activeStart) / 1000);
-          data[me].logs.push({ date: Date.now(), duration: duration });
+          data[me].logs.push({ date: Date.now(), duration: Math.floor((Date.now() - data[me].activeStart) / 1000) });
           data[me].activeStart = null;
         } else {
           data[me].activeStart = Date.now();
@@ -222,70 +225,10 @@ input:checked + .slider:before { transform: translateX(14px); }
       }).then(() => updateUI(true));
     };
 
-    window.showManualInput = function(userId) {
-      isAddingManual = true;
-      document.getElementById(`manual-area-${userId}`).innerHTML = `
-        <div style="padding: 10px 0;">
-          <input type="text" class="edit-input" id="new-manual-val" placeholder="např. 1h 20m" onkeydown="handleManualKey(event)">
-        </div>`;
-      document.getElementById('new-manual-val').focus();
-    };
-
-    window.handleManualKey = function(e) {
-      if (e.key === 'Enter') {
-        var seconds = parseToSeconds(e.target.value);
-        if (seconds > 0) {
-          var me = t.getContext().member;
-          t.get('card', 'shared', 'workLogs', {}).then(d => {
-            if(!d[me]) d[me] = { logs: [] };
-            d[me].logs.push({ date: Date.now(), duration: seconds });
-            return t.set('card', 'shared', 'workLogs', d);
-          }).then(() => { isAddingManual = false; updateUI(true); });
-        } else { isAddingManual = false; updateUI(true); }
-      } else if (e.key === 'Escape') { isAddingManual = false; updateUI(true); }
-    };
-
-    window.startEdit = function(userId, idx, currentHM) {
-      editingIdx = idx;
-      var container = document.getElementById(`val-${userId}-${idx}`);
-      container.innerHTML = `<input type="text" class="edit-input" id="input-${idx}" value="${currentHM}" onblur="cancelEdit()" onkeydown="handleEditKey(event, ${idx})">`;
-      document.getElementById(`input-${idx}`).focus();
-    };
-
-    window.handleEditKey = function(e, idx) {
-      if (e.key === 'Enter') saveEdit(idx, e.target.value);
-      else if (e.key === 'Escape') cancelEdit();
-    };
-
-    window.saveEdit = function(idx, val) {
-      var seconds = parseToSeconds(val);
-      var me = t.getContext().member;
-      t.get('card', 'shared', 'workLogs').then(d => {
-        d[me].logs[idx].duration = seconds;
-        return t.set('card', 'shared', 'workLogs', d);
-      }).then(() => { editingIdx = null; updateUI(true); });
-    };
-
-    window.cancelEdit = function() { setTimeout(() => { editingIdx = null; updateUI(true); }, 150); };
-
-    window.deleteLog = function(idx) {
-      var me = t.getContext().member;
-      if (confirm("Smazat tento záznam?")) {
-        t.get('card', 'shared', 'workLogs').then(d => {
-          d[me].logs.splice(idx, 1);
-          return t.set('card', 'shared', 'workLogs', d);
-        }).then(() => updateUI(true));
-      }
-    };
-
     window.toggleLogs = function(id) {
-      if (editingIdx !== null || isAddingManual) return;
-      var el = document.getElementById('logs-' + id);
-      if (openLogsId === id) { el.style.display = 'none'; openLogsId = null; }
-      else {
-        if (openLogsId) { var prev = document.getElementById('logs-' + openLogsId); if (prev) prev.style.display = 'none'; }
-        el.style.display = 'block'; openLogsId = id;
-      }
+      openLogsId = (openLogsId === id) ? null : id;
+      updateUI(true);
+      setTimeout(resize, 50); // Malá prodleva pro animaci prohlížeče
     };
 
     window.toggleAccess = function(uid) {
@@ -295,8 +238,20 @@ input:checked + .slider:before { transform: translateX(14px); }
       }).then(() => updateUI(true));
     };
 
+    window.deleteLog = function(idx) {
+      var me = t.getContext().member;
+      if (confirm("Smazat?")) {
+        t.get('card', 'shared', 'workLogs').then(d => {
+          d[me].logs.splice(idx, 1);
+          return t.set('card', 'shared', 'workLogs', d);
+        }).then(() => updateUI(true));
+      }
+    };
+
     setInterval(() => updateUI(false), 1000);
     updateUI(true);
+    // Prvotní resize po načtení
+    setTimeout(resize, 500);
   </script>
 </body>
 </html>
