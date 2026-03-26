@@ -4,11 +4,18 @@
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-    body { padding: 10px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
-    .status-bar { font-size: 9px; opacity: 0.5; margin-bottom: 10px; }
-    .my-timer-card { background: var(--ds-background-neutral, #f4f5f7); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--ds-border, #ccc); text-align: center; }
-    .user-timer { font-size: 32px; font-weight: bold; margin-bottom: 10px; font-family: monospace; }
+    body { padding: 12px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
+    .status-bar { font-size: 9px; opacity: 0.5; margin-bottom: 12px; }
     
+    /* Nový kompaktní Timer Row */
+    .timer-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 4px; }
+    .play-btn { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: transform 0.1s; color: white; flex-shrink: 0; }
+    .play-btn:active { transform: scale(0.9); }
+    .btn-start { background-color: #00a854; }
+    .btn-stop { background-color: #eb5a46; }
+    .display-now { font-size: 24px; font-weight: bold; font-family: monospace; letter-spacing: -1px; }
+
+    /* Seznamy */
     .user-row { margin-bottom: 8px; border-bottom: 1px solid var(--ds-border, #eee); padding-bottom: 5px; }
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
@@ -16,31 +23,34 @@
     .logs-container { display: none; margin-top: 5px; font-size: 12px; padding: 0 8px 8px 15px; }
     .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #eee; color: #5e6c84; }
     
-    /* Vylepšená inline editace */
+    /* Manuální přidání a editace */
+    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 8px 0; font-size: 11px; font-weight: bold; text-decoration: underline; }
+    .add-manual-btn:hover { color: #005a8f; }
     .edit-input { width: 80px; padding: 2px 4px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
     .log-controls button { padding: 0 6px; font-size: 10px; cursor: pointer; margin-left: 3px; background: transparent; border: 1px solid #ddd; border-radius: 3px; color: #888; }
     
+    /* Admin Toggle */
     .admin-panel { margin-top: 25px; border-top: 2px solid #eee; padding-top: 10px; }
-    .admin-title { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 15px; letter-spacing: 1px; }
-    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f9f9f9; }
+    .admin-title { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 10px; }
+    .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; }
     .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
     .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background-color: #00a854; }
     input:checked + .slider:before { transform: translateX(14px); }
-
-    button.mod-primary { width: 100%; padding: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
   <div id="status" class="status-bar">Načítání...</div>
-  <div class="my-timer-card">
-    <div id="my-display" class="user-timer">00:00:00</div>
-    <button id="start-btn" class="mod-primary">SPUSTIT MĚŘENÍ</button>
-    <button id="stop-btn" style="display:none; width:100%; background:#eb5a46; color:white; border:none; padding:10px; font-weight:bold; border-radius:3px; cursor:pointer;">ZASTAVIT A ULOŽIT</button>
+
+  <div class="timer-row">
+    <button id="main-timer-btn" class="play-btn btn-start">▶</button>
+    <div id="my-display" class="display-now">00:00:00</div>
   </div>
+
   <div id="users-list"></div>
+
   <div id="admin-section" style="display:none;" class="admin-panel">
     <div class="admin-title">ADMINISTRACE PŘÍSTUPŮ</div>
     <div id="members-to-authorize"></div>
@@ -51,17 +61,13 @@
     var t = TrelloPowerUp.iframe();
     var openLogsId = null;
     var editingIdx = null;
+    var isAddingManual = false;
 
-    // Pomocné funkce pro formátování
     function fTimeFull(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
-    
     function formatToHM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
-      let res = "";
-      if (h > 0) res += h + "h ";
-      res += m + "m";
-      return res;
+      return (h > 0 ? h + "h " : "") + m + "m";
     }
 
     function parseToSeconds(str) {
@@ -70,8 +76,7 @@
       const mMatch = str.match(/(\d+)\s*m/);
       if (hMatch) seconds += parseInt(hMatch[1]) * 3600;
       if (mMatch) seconds += parseInt(mMatch[1]) * 60;
-      // Pokud uživatel zadal jen číslo bez jednotek, bereme to jako minuty
-      if (!hMatch && !mMatch && !isNaN(str)) seconds += parseInt(str) * 60;
+      if (!hMatch && !mMatch && !isNaN(str) && str !== "") seconds += parseInt(str) * 60;
       return seconds;
     }
 
@@ -86,21 +91,21 @@
         var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
 
+        // Horní Timer
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
+        var btn = document.getElementById('main-timer-btn');
         
         if (myData.activeStart) {
-          document.getElementById('start-btn').style.display = 'none';
-          document.getElementById('stop-btn').style.display = 'block';
+          btn.innerHTML = "■"; btn.className = "play-btn btn-stop";
           var sess = Math.floor((Date.now() - myData.activeStart) / 1000);
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal + sess);
         } else {
-          document.getElementById('start-btn').style.display = 'block';
-          document.getElementById('stop-btn').style.display = 'none';
+          btn.innerHTML = "▶"; btn.className = "play-btn btn-start";
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
         }
 
-        if (editingIdx === null && (forceFullRedraw || document.getElementById('users-list').innerHTML === "")) {
+        if (editingIdx === null && !isAddingManual && (forceFullRedraw || document.getElementById('users-list').innerHTML === "")) {
           var html = '';
           allowedUsers.forEach(userId => {
             var member = cardMembers.find(m => m.id === userId);
@@ -116,19 +121,14 @@
                   <span><strong>${formatToHM(totalSec)}</strong> ▾</span>
                 </div>
                 <div class="logs-container" id="logs-${userId}" style="display: ${openLogsId === userId ? 'block' : 'none'}">
-                  ${(uData.logs || []).map((log, idx) => {
-                    var dateStr = new Date(log.date).toLocaleDateString();
-                    var hmStr = formatToHM(log.duration);
-                    return `
-                    <div class="log-item">
-                      <span>${dateStr}: <b id="val-${userId}-${idx}">${hmStr}</b></span>
-                      ${userId === me ? `
-                        <div class="log-controls">
-                          <button onclick="startEdit('${userId}', ${idx}, '${hmStr}')">✎</button>
-                          <button onclick="deleteLog(${idx})">✕</button>
-                        </div>` : ''}
-                    </div>`;
-                  }).join('') || '<div style="opacity:0.5; padding: 5px 0;">Bez historie</div>'}
+                  <div id="log-list-${userId}">
+                    ${(uData.logs || []).map((log, idx) => `
+                      <div class="log-item">
+                        <span>${new Date(log.date).toLocaleDateString()}: <b id="val-${userId}-${idx}">${formatToHM(log.duration)}</b></span>
+                        ${userId === me ? `<div class="log-controls"><button onclick="startEdit('${userId}', ${idx}, '${formatToHM(log.duration)}')">✎</button><button onclick="deleteLog(${idx})">✕</button></div>` : ''}
+                      </div>`).join('')}
+                  </div>
+                  ${userId === me ? `<div id="manual-area-${userId}"><button class="add-manual-btn" onclick="showManualInput('${userId}')">+ Přidat záznam</button></div>` : ''}
                 </div>
               </div>`;
           });
@@ -147,6 +147,51 @@
       });
     }
 
+    // Funkce pro manuální přidání
+    window.showManualInput = function(userId) {
+      isAddingManual = true;
+      document.getElementById(`manual-area-${userId}`).innerHTML = `
+        <div style="padding: 10px 0;">
+          <input type="text" class="edit-input" id="new-manual-val" placeholder="1h 20m" onkeydown="handleManualKey(event)">
+          <small style="display:block; opacity:0.5; font-size:9px;">Enter pro uložení, Esc pro zrušení</small>
+        </div>`;
+      document.getElementById('new-manual-val').focus();
+    };
+
+    window.handleManualKey = function(e) {
+      if (e.key === 'Enter') {
+        var val = e.target.value;
+        var seconds = parseToSeconds(val);
+        if (seconds > 0) {
+          var me = t.getContext().member;
+          t.get('card', 'shared', 'workLogs', {}).then(d => {
+            if(!d[me]) d[me] = { logs: [] };
+            d[me].logs.push({ date: Date.now(), duration: seconds });
+            return t.set('card', 'shared', 'workLogs', d);
+          }).then(() => { isAddingManual = false; updateUI(true); });
+        } else { cancelManual(); }
+      } else if (e.key === 'Escape') { cancelManual(); }
+    };
+
+    function cancelManual() { isAddingManual = false; updateUI(true); }
+
+    // Start/Stop logika
+    document.getElementById('main-timer-btn').onclick = function() {
+      var me = t.getContext().member;
+      t.get('card', 'shared', 'workLogs', {}).then(data => {
+        if (!data[me]) data[me] = { activeStart: null, logs: [] };
+        if (data[me].activeStart) { // STOP
+          var duration = Math.floor((Date.now() - data[me].activeStart) / 1000);
+          data[me].logs.push({ date: Date.now(), duration: duration });
+          data[me].activeStart = null;
+        } else { // START
+          data[me].activeStart = Date.now();
+        }
+        return t.set('card', 'shared', 'workLogs', data);
+      }).then(() => updateUI(true));
+    };
+
+    // Editace existujících
     window.startEdit = function(userId, idx, currentHM) {
       editingIdx = idx;
       var container = document.getElementById(`val-${userId}-${idx}`);
@@ -161,7 +206,6 @@
 
     window.saveEdit = function(idx, val) {
       var seconds = parseToSeconds(val);
-      if (seconds === 0 && val !== "0m") return cancelEdit();
       var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs').then(d => {
         d[me].logs[idx].duration = seconds;
@@ -169,49 +213,25 @@
       }).then(() => { editingIdx = null; updateUI(true); });
     };
 
-    window.cancelEdit = function() {
-      setTimeout(() => { editingIdx = null; updateUI(true); }, 150);
+    window.cancelEdit = function() { setTimeout(() => { editingIdx = null; updateUI(true); }, 150); };
+
+    window.deleteLog = function(idx) {
+      var me = t.getContext().member;
+      if (confirm("Smazat záznam?")) {
+        t.get('card', 'shared', 'workLogs').then(d => {
+          d[me].logs.splice(idx, 1);
+          return t.set('card', 'shared', 'workLogs', d);
+        }).then(() => updateUI(true));
+      }
     };
 
-    setInterval(() => updateUI(false), 1000);
-
     window.toggleLogs = function(id) {
-      if (editingIdx !== null) return;
+      if (editingIdx !== null || isAddingManual) return;
       var el = document.getElementById('logs-' + id);
       if (openLogsId === id) { el.style.display = 'none'; openLogsId = null; }
       else {
         if (openLogsId) { var prev = document.getElementById('logs-' + openLogsId); if (prev) prev.style.display = 'none'; }
         el.style.display = 'block'; openLogsId = id;
-      }
-    };
-
-    document.getElementById('start-btn').onclick = function() {
-      var me = t.getContext().member;
-      t.get('card', 'shared', 'workLogs', {}).then(data => {
-        if (!data[me]) data[me] = { activeStart: null, logs: [] };
-        data[me].activeStart = Date.now();
-        return t.set('card', 'shared', 'workLogs', data);
-      }).then(() => updateUI(true));
-    };
-
-    document.getElementById('stop-btn').onclick = function() {
-      var me = t.getContext().member;
-      t.get('card', 'shared', 'workLogs', {}).then(data => {
-        var duration = Math.floor((Date.now() - data[me].activeStart) / 1000);
-        if (!data[me].logs) data[me].logs = [];
-        data[me].logs.push({ date: Date.now(), duration: duration });
-        data[me].activeStart = null;
-        return t.set('card', 'shared', 'workLogs', data);
-      }).then(() => updateUI(true));
-    };
-
-    window.deleteLog = function(idx) {
-      var me = t.getContext().member;
-      if (confirm("Smazat?")) {
-        t.get('card', 'shared', 'workLogs').then(d => {
-          d[me].logs.splice(idx, 1);
-          return t.set('card', 'shared', 'workLogs', d);
-        }).then(() => updateUI(true));
       }
     };
 
@@ -222,6 +242,7 @@
       }).then(() => updateUI(true));
     };
 
+    setInterval(() => updateUI(false), 1000);
     updateUI(true);
   </script>
 </body>
