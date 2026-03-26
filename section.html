@@ -13,9 +13,11 @@
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     
-    .logs-container { display: none; margin-top: 5px; font-size: 12px; background: #f9f9f9; padding: 8px; border-radius: 4px; }
-    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dotted #ddd; }
-    .log-controls button { padding: 0 5px; font-size: 10px; cursor: pointer; margin-left: 3px; background: white; border: 1px solid #ccc; }
+    /* Historie bez backgroundu */
+    .logs-container { display: none; margin-top: 5px; font-size: 12px; padding: 0 8px 8px 15px; }
+    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #eee; color: #5e6c84; }
+    .log-controls button { padding: 0 5px; font-size: 10px; cursor: pointer; margin-left: 3px; background: transparent; border: 1px solid #ddd; border-radius: 3px; color: #888; }
+    .log-controls button:hover { border-color: #888; color: #444; }
     
     /* Admin sekce */
     .admin-panel { margin-top: 25px; border-top: 2px solid #eee; padding-top: 10px; }
@@ -110,7 +112,7 @@
                       <span>${new Date(log.date).toLocaleDateString()}: ${formatToHHMM(log.duration)}</span>
                       ${userId === me ? `<div class="log-controls"><button onclick="editLog(${idx})">✎</button><button onclick="deleteLog(${idx})">✕</button></div>` : ''}
                     </div>
-                  `).join('') || '<div style="opacity:0.5">Žádné záznamy</div>'}
+                  `).join('') || '<div style="opacity:0.5; padding: 5px 0;">Bez historie</div>'}
                 </div>
               </div>`;
           });
