@@ -52,7 +52,7 @@
 
     return {
       title: '', // PRÁZDNÉ - odstraní ten otravný nápis i čáru
-      icon: './icon.svg'
+      icon: './icon.svg',
       content: {
         type: 'iframe',
         url: t.signUrl('./section.html'),
@@ -61,7 +61,6 @@
     };
   });
 },
-
       'board-buttons': function(t, options) {
         var me = t.getContext().member;
         if (me !== ADMIN_ID) return [];
