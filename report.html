@@ -49,12 +49,19 @@
     .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
     
     /* ODSTRANĚNÍ BÍLÉHO POZADÍ Z KARET GRAFŮ */
-    .chart-card { 
-      background-color: var(--bg-card) !important; 
-      padding: 15px; border-radius: 8px; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-      height: 350px; 
-    }
+ .chart-card { 
+  background-color: var(--bg-card) !important; 
+  padding: 15px; 
+  border-radius: 8px; 
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+  height: 350px;
+  
+  /* AKTIVACE RUČNÍHO ROZTAHOVÁNÍ */
+  overflow: auto; 
+  resize: horizontal; /* Umožní měnit šířku tažením za pravý roh */
+  min-width: 300px;
+  max-width: 100%;
+}
     
     /* VYNUCENÍ PRŮHLEDNOSTI CANVASU */
     canvas { background-color: transparent !important; }
@@ -210,6 +217,26 @@
 
       const taskLabels = Object.values(pivotData).map(t => t.name.substring(0, 15));
       const taskValues = Object.values(pivotData).map(t => t.total);
+     // Funkce pro uložení šířky
+const taskContainer = document.getElementById('taskChart-container');
+
+// Sledování změn velikosti (Resize Observer)
+const ro = new ResizeObserver(entries => {
+  for (let entry of entries) {
+    // Uložíme šířku do paměti prohlížeče pod klíčem 'chart-width'
+    localStorage.setItem('report-chart-width', entry.contentRect.width + 'px');
+  }
+});
+
+ro.observe(taskContainer);
+
+// Při načtení stránky aplikujeme uloženou šířku
+window.addEventListener('load', () => {
+  const savedWidth = localStorage.getItem('report-chart-width');
+  if (savedWidth) {
+    taskContainer.style.width = savedWidth;
+  }
+});
 
       taskChart = new Chart(document.getElementById('taskChart'), {
         type: 'bar',
