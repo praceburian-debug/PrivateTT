@@ -1,8 +1,8 @@
 {
   "name": "Private Time Tracker",
   "icon": {
-    "url": "https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4fc2-880a-504e0e84429a%2Ficon-gray.svg"
-  },
+  "url": "./icon.svg"
+},
   "capabilities": [
     "card-badges",
     "card-back-section",
