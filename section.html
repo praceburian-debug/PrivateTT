@@ -7,56 +7,54 @@
     body { padding: 12px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
     .status-bar { font-size: 9px; opacity: 0.5; margin-bottom: 12px; }
     
-    .timer-row { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding: 5px; }
+    /* Horní Timer - Zarovnáno na střed */
+    .timer-row { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 30px; padding: 10px; }
     
-    /* Základní styl tlačítka */
     .play-btn { 
-      width: 40px; height: 40px; 
+      width: 44px; height: 44px; 
       border-radius: 50%; border: none; 
       cursor: pointer; display: flex; 
       align-items: center; justify-content: center; 
-      font-size: 18px; color: white !important; 
+      font-size: 20px; color: white !important; 
       flex-shrink: 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     .play-btn:active { transform: scale(0.9); }
-    
-    /* FIXNÍ BARVY PODLE STAVU */
-    .btn-start { 
-      background-color: #00a854 !important; /* Vždy zelená */
-    }
-    .btn-start:hover { 
-      background-color: #008f47 !important; 
-    }
-    
-    .btn-stop { 
-      background-color: #eb5a46 !important; /* Vždy červená */
-    }
-    .btn-stop:hover { 
-      background-color: #cf3521 !important; 
-    }
+    .btn-start { background-color: #00a854 !important; }
+    .btn-stop { background-color: #eb5a46 !important; }
 
-    .display-now { font-size: 26px; font-weight: bold; font-family: monospace; color: var(--ds-text, #172b4d); }
+    .display-now { font-size: 32px; font-weight: bold; font-family: monospace; color: var(--ds-text, #172b4d); }
 
-    /* Seznamy */
+    /* Seznamy a řádky */
     .user-row { margin-bottom: 8px; border-bottom: 1px solid var(--ds-border, #eee); padding-bottom: 5px; }
-    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 6px; border-radius: 4px; }
+    .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 8px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
     
     .logs-container { display: none; margin-top: 5px; font-size: 12px; padding: 0 8px 10px 15px; }
-    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #eee; color: #5e6c84; }
+    .log-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dotted #eee; color: #5e6c84; }
     
-    /* Manuální a Edit */
-    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 10px 0; font-size: 11px; font-weight: bold; text-decoration: underline; }
-    .edit-input { width: 85px; padding: 3px 5px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
-    .log-controls button { padding: 0 6px; font-size: 10px; cursor: pointer; margin-left: 3px; background: transparent; border: 1px solid #ddd; border-radius: 3px; color: #888; }
+    /* Nová barevná kulatá tlačítka v historii */
+    .log-controls { display: flex; gap: 6px; }
+    .circle-btn {
+      width: 24px; height: 24px;
+      border-radius: 50%; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: white; font-size: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      transition: opacity 0.2s;
+    }
+    .circle-btn:hover { opacity: 0.8; }
+    .circle-btn:active { transform: scale(0.9); }
+    .btn-edit { background-color: #0079bf; } /* Modrá s tužkou */
+    .btn-delete { background-color: #eb5a46; } /* Červená s křížkem */
     
-    /* Admin */
+    .add-manual-btn { background: none; border: none; color: #0079bf; cursor: pointer; padding: 12px 0; font-size: 11px; font-weight: bold; text-decoration: underline; }
+    .edit-input { width: 90px; padding: 4px; border: 1px solid #4c9aff; border-radius: 3px; font-size: 11px; font-family: monospace; outline: none; }
+    
+    /* Admin Switch */
     .admin-panel { margin-top: 30px; border-top: 2px solid #eee; padding-top: 15px; }
     .admin-title { font-size: 11px; font-weight: bold; color: #888; margin-bottom: 12px; text-transform: uppercase; }
     .admin-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; }
-    
-    /* Switch */
     .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -150,10 +148,14 @@
                     ${(uData.logs || []).map((log, idx) => `
                       <div class="log-item">
                         <span>${new Date(log.date).toLocaleDateString()}: <b id="val-${userId}-${idx}">${formatToHM(log.duration)}</b></span>
-                        ${userId === me ? `<div class="log-controls"><button onclick="startEdit('${userId}', ${idx}, '${formatToHM(log.duration)}')">✎</button><button onclick="deleteLog(${idx})">✕</button></div>` : ''}
+                        ${userId === me ? `
+                        <div class="log-controls">
+                          <button title="Upravit" class="circle-btn btn-edit" onclick="startEdit('${userId}', ${idx}, '${formatToHM(log.duration)}')">✎</button>
+                          <button title="Smazat" class="circle-btn btn-delete" onclick="deleteLog(${idx})">✕</button>
+                        </div>` : ''}
                       </div>`).join('')}
                   </div>
-                  ${userId === me ? `<div id="manual-area-${userId}"><button class="add-manual-btn" onclick="showManualInput('${userId}')">+ Přidat záznam</button></div>` : ''}
+                  ${userId === me ? `<div id="manual-area-${userId}"><button class="add-manual-btn" onclick="showManualInput('${userId}')">+ Přidat záznam manuálně</button></div>` : ''}
                 </div>
               </div>`;
           });
