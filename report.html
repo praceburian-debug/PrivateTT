@@ -52,10 +52,12 @@
       </select>
     </div>
 
-    <div class="control-group">
-      <label>Hledat task (název)</label>
-      <input type="text" id="task-filter" placeholder="Název karty...">
-    </div>
+   <div class="control-group">
+  <label>Vybrat task</label>
+  <select id="task-select">
+    <option value="all">Všechny tasky</option>
+  </select>
+</div>
 
     <div class="btn-group">
       <button class="mod-primary" onclick="loadAndRender()">Aktualizovat</button>
@@ -111,54 +113,83 @@
     }
 
     async function loadAndRender() {
-      const range = getTimeRange();
-      const selectedMember = document.getElementById('member-select').value;
-      const taskSearch = document.getElementById('task-filter').value.toLowerCase();
-      
-      const cards = await t.cards('all');
-      const boardMembers = (await t.board('members')).members;
-      
-      // Naplnění selectu členů (jen poprvé)
-      const memberSelect = document.getElementById('member-select');
-      if (memberSelect.options.length === 1) {
-        boardMembers.forEach(m => {
-          memberSelect.add(new Option(m.fullName, m.id));
-        });
-      }
-
-      let stats = {}; 
-      lastExportData = [];
-
-      for (let card of cards) {
-        // Filtr: Název tasku
-        if (taskSearch && !card.name.toLowerCase().includes(taskSearch)) continue;
-
-        const workLogs = await t.get(card.id, 'shared', 'workLogs', {});
+      try {
+        const range = getTimeRange();
+        const selectedMember = document.getElementById('member-select').value;
+        const selectedTaskId = document.getElementById('task-select').value; // Nový filtr
         
-        for (let userId in workLogs) {
-          // Filtr: Konkrétní člověk
-          if (selectedMember !== 'all' && userId !== selectedMember) continue;
-
-          const member = boardMembers.find(m => m.id === userId);
-          const name = member ? member.fullName : 'Neznámý';
+        const cards = await t.cards('all');
+        const boardData = await t.board('members');
+        const boardMembers = boardData.members || [];
+        
+        // --- LOGIKA PRO NAPLNĚNÍ SEZNAMU TASKŮ ---
+        const taskSelect = document.getElementById('task-select');
+        const twoMonthsAgo = Date.now() - (60 * 24 * 60 * 60 * 1000);
+        
+        // Pokud je seznam prázdný (jen "Všechny"), naplníme ho
+        if (taskSelect.options.length <= 1) {
+          let activeTasks = [];
           
-          if (!stats[userId]) stats[userId] = 0;
-          
-          const logs = workLogs[userId].logs || [];
-          logs.forEach(log => {
-            if (log.date >= range.start && log.date <= range.end) {
-              stats[userId] += log.duration;
-              lastExportData.push({
-                datum: new Date(log.date).toLocaleDateString('cs-CZ'),
-                clovek: name,
-                karta: card.name,
-                sekundy: log.duration
-              });
+          for (let card of cards) {
+            const logs = await t.get(card.id, 'shared', 'workLogs', {});
+            let hasRecentLog = false;
+            
+            // Kontrola, zda má karta log v posledních 2 měsících
+            for (let userId in logs) {
+              if (logs[userId].logs && logs[userId].logs.some(l => l.date > twoMonthsAgo)) {
+                hasRecentLog = true;
+                break;
+              }
             }
+            
+            if (hasRecentLog) {
+              activeTasks.push({ name: card.name, id: card.id });
+            }
+          }
+          
+          // Seřadíme podle abecedy a přidáme do selectu
+          activeTasks.sort((a, b) => a.name.localeCompare(b.name)).forEach(task => {
+            taskSelect.add(new Option(task.name, task.id));
           });
         }
+        // ------------------------------------------
+
+        let stats = {}; 
+        lastExportData = [];
+
+        for (let card of cards) {
+          // FILTR: Pokud je vybrán konkrétní task, ostatní přeskočíme
+          if (selectedTaskId !== 'all' && card.id !== selectedTaskId) continue;
+
+          const workLogs = await t.get(card.id, 'shared', 'workLogs', {});
+          if (!workLogs) continue;
+
+          for (let userId in workLogs) {
+            if (selectedMember !== 'all' && userId !== selectedMember) continue;
+
+            const member = boardMembers.find(m => m.id === userId);
+            const name = member ? member.fullName : 'Neznámý';
+            
+            const logs = workLogs[userId].logs || [];
+            logs.forEach(log => {
+              if (log.date >= range.start && log.date <= range.end) {
+                if (!stats[userId]) stats[userId] = 0;
+                stats[userId] += log.duration;
+                
+                lastExportData.push({
+                  datum: new Date(log.date).toLocaleDateString('cs-CZ'),
+                  clovek: name,
+                  karta: card.name,
+                  sekundy: log.duration
+                });
+              }
+            });
+          }
+        }
+        renderChart(stats, boardMembers);
+      } catch (err) {
+        console.error("Chyba:", err);
       }
-      renderChart(stats, boardMembers);
     }
 
     function renderChart(stats, members) {
