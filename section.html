@@ -7,32 +7,38 @@
     body { padding: 12px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
     .status-bar { font-size: 9px; opacity: 0.5; margin-bottom: 12px; }
     
-    /* Timer Row - Horní sekce */
     .timer-row { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding: 5px; }
     
-    /* Dynamické tlačítko */
+    /* Základní styl tlačítka */
     .play-btn { 
       width: 40px; height: 40px; 
       border-radius: 50%; border: none; 
       cursor: pointer; display: flex; 
       align-items: center; justify-content: center; 
-      font-size: 18px; color: white; 
-      transition: background-color 0.2s, transform 0.1s; 
+      font-size: 18px; color: white !important; 
       flex-shrink: 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     .play-btn:active { transform: scale(0.9); }
     
-    /* Stavy tlačítka */
-    .btn-start { background-color: #00a854; } /* Zelená pro Play */
-    .btn-start:hover { background-color: #008f47; }
+    /* FIXNÍ BARVY PODLE STAVU */
+    .btn-start { 
+      background-color: #00a854 !important; /* Vždy zelená */
+    }
+    .btn-start:hover { 
+      background-color: #008f47 !important; 
+    }
     
-    .btn-stop { background-color: #eb5a46; } /* Červená pro Stop */
-    .btn-stop:hover { background-color: #cf3521; }
+    .btn-stop { 
+      background-color: #eb5a46 !important; /* Vždy červená */
+    }
+    .btn-stop:hover { 
+      background-color: #cf3521 !important; 
+    }
 
-    .display-now { font-size: 26px; font-weight: bold; font-family: monospace; letter-spacing: -1px; color: var(--ds-text, #172b4d); }
+    .display-now { font-size: 26px; font-weight: bold; font-family: monospace; color: var(--ds-text, #172b4d); }
 
-    /* Seznamy a historie */
+    /* Seznamy */
     .user-row { margin-bottom: 8px; border-bottom: 1px solid var(--ds-border, #eee); padding-bottom: 5px; }
     .user-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 6px; border-radius: 4px; }
     .user-header:hover { background: var(--ds-background-neutral-hovered, #ebecf0); }
@@ -109,25 +115,21 @@
         var cardMembers = res[1].members || [];
         var allowedUsers = res[2] || [ADMIN_ID];
 
-        // LOGIKA TLAČÍTKA A TIMERU
         var myData = allLogs[me] || { activeStart: null, logs: [] };
         var myStoredTotal = (myData.logs || []).reduce((s,l) => s + (l.duration || 0), 0);
         var btn = document.getElementById('main-timer-btn');
         
         if (myData.activeStart) {
-          // Běží: Červená + Čtverec
           btn.innerHTML = "■"; 
           btn.className = "play-btn btn-stop";
           var sess = Math.floor((Date.now() - myData.activeStart) / 1000);
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal + sess);
         } else {
-          // Stojí: Zelená + Play
           btn.innerHTML = "▶"; 
           btn.className = "play-btn btn-start";
           document.getElementById('my-display').textContent = fTimeFull(myStoredTotal);
         }
 
-        // REDRAW SEZNAMU
         if (editingIdx === null && !isAddingManual && (forceFullRedraw || document.getElementById('users-list').innerHTML === "")) {
           var html = '';
           allowedUsers.forEach(userId => {
@@ -158,7 +160,6 @@
           document.getElementById('users-list').innerHTML = html;
         }
 
-        // ADMIN SECTION
         if (me === ADMIN_ID && (forceFullRedraw || document.getElementById('members-to-authorize').innerHTML === "")) {
           document.getElementById('admin-section').style.display = 'block';
           var adminHtml = '';
@@ -171,23 +172,21 @@
       });
     }
 
-    // OVLÁDÁNÍ HLAVNÍHO TIMERU
     document.getElementById('main-timer-btn').onclick = function() {
       var me = t.getContext().member;
       t.get('card', 'shared', 'workLogs', {}).then(data => {
         if (!data[me]) data[me] = { activeStart: null, logs: [] };
-        if (data[me].activeStart) { // ZASTAVIT
+        if (data[me].activeStart) {
           var duration = Math.floor((Date.now() - data[me].activeStart) / 1000);
           data[me].logs.push({ date: Date.now(), duration: duration });
           data[me].activeStart = null;
-        } else { // SPUSTIT
+        } else {
           data[me].activeStart = Date.now();
         }
         return t.set('card', 'shared', 'workLogs', data);
       }).then(() => updateUI(true));
     };
 
-    // MANUÁLNÍ PŘIDÁNÍ
     window.showManualInput = function(userId) {
       isAddingManual = true;
       document.getElementById(`manual-area-${userId}`).innerHTML = `
@@ -211,7 +210,6 @@
       } else if (e.key === 'Escape') { isAddingManual = false; updateUI(true); }
     };
 
-    // EDITACE A MAZÁNÍ
     window.startEdit = function(userId, idx, currentHM) {
       editingIdx = idx;
       var container = document.getElementById(`val-${userId}-${idx}`);
