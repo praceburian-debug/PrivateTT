@@ -47,21 +47,24 @@
         console.error(err);
       });
 
-    document.getElementById('auth-btn').onclick = function() {
-      t.getRestApi().authorize({ scope: 'read,write' }).then(() => location.reload());
-    };
-
-    document.getElementById('save-btn').onclick = function() {
-      var d = document.getElementById('date').value;
-      var m = document.getElementById('msg').value;
-      if(!d || !m) return;
-      t.get('card', 'shared', 'scheduled_comments', [])
-        .then(function(list) {
-          list.push({ date: d, msg: m });
-          return t.set('card', 'shared', 'scheduled_comments', list);
-        })
-        .then(() => t.closePopup());
-    };
+   document.getElementById('save-btn').onclick = function() {
+  var d = document.getElementById('date').value;
+  var m = document.getElementById('msg').value;
+  
+  // Získáme token aktuálního uživatele (kolegy)
+  t.getRestApi().getToken().then(function(token) {
+    t.get('card', 'shared', 'scheduled_comments', [])
+      .then(function(list) {
+        list.push({ 
+          date: d, 
+          msg: m, 
+          token: token // Uložíme jeho soukromý klíč k této zprávě
+        });
+        return t.set('card', 'shared', 'scheduled_comments', list);
+      })
+      .then(() => t.closePopup());
+  });
+};
   </script>
 </body>
 </html>
