@@ -6,55 +6,48 @@
 </head>
 <body>
   <script>
-    // --- KONFIGURACE ---
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
     const TRELLO_API_KEY = '4970b28a9bf54fcfa9298b7e4e50660f'; 
 
-    // POMOCNÁ FUNKCE PRO FORMÁT ČASU
     function formatToHHMM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
       return h + ":" + (m < 10 ? "0" : "") + m;
     }
 
-    // FUNKCE PRO KONTROLU A ODESLÁNÍ NAPLÁNOVANÝCH KOMENTÁŘŮ
-  function checkScheduledComments(t) {
-  return t.get('card', 'shared', 'scheduled_comments', [])
-  .then(function(comments) {
-    if (!comments || comments.length === 0) return;
+    function checkScheduledComments(t) {
+      // Tuto logiku spustíme jen pokud jsi to ty (Admin / tvůj běžící prohlížeč)
+      if (t.getContext().member !== ADMIN_ID) return;
 
-    var now = new Date().getTime();
-    var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
-    var remaining = comments.filter(c => new Date(c.date).getTime() > now);
+      return t.get('card', 'shared', 'scheduled_comments', [])
+      .then(function(comments) {
+        if (!comments || comments.length === 0) return;
 
-    if (toSend.length > 0) {
-      // Získáme token aktuálně přihlášeného uživatele
-      return t.getRestApi().getToken().then(function(token) {
-        // Pokud kolega ještě nedal "Autorizovat", token nebude mít a nic se neodešle (pošle se to, až kartu otevřeš ty nebo on po autorizaci)
-        if (!token) return; 
+        var now = new Date().getTime();
+        var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
+        var remaining = comments.filter(c => new Date(c.date).getTime() > now);
 
-        return t.card('id').then(function(cardData) {
-          var cardId = cardData.id;
-          
-         var promises = toSend.map(function(c) {
-  // Tady je ten trik: Použijeme token, který jsme si uložili od kolegy!
-  var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${c.token}`;
-  return fetch(url, { method: 'POST' });
-});
+        if (toSend.length > 0) {
+          return t.card('id').then(function(cardData) {
+            var cardId = cardData.id;
+            
+            var promises = toSend.map(function(c) {
+              // POUŽIJEME TOKEN AUTORA ULOŽENÝ V scheduler.html
+              var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${c.token}`;
+              return fetch(url, { method: 'POST' });
+            });
 
-          return Promise.all(promises).then(function() {
-            return t.set('card', 'shared', 'scheduled_comments', remaining);
+            return Promise.all(promises).then(function() {
+              return t.set('card', 'shared', 'scheduled_comments', remaining);
+            });
           });
-        });
+        }
       });
     }
-  });
-}
 
-    // TADY JE TA NEJDŮLEŽITĚJŠÍ ZMĚNA - PŘIDÁNÍ APPKEY A APPNAME
     TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
-        checkScheduledComments(t);
+        checkScheduledComments(t); // Tvůj prohlížeč skenuje frontu
 
         return Promise.all([
           t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
@@ -85,15 +78,10 @@
         return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
           var me = t.getContext().member;
           if (me !== ADMIN_ID && !allowed.includes(me)) return null;
-
           return {
             title: '',
             icon: './icon.svg',
-            content: {
-              type: 'iframe',
-              url: t.signUrl('./section.html'),
-              initialHeight: 44
-            }
+            content: { type: 'iframe', url: t.signUrl('./section.html'), initialHeight: 44 }
           };
         });
       },
@@ -101,16 +89,11 @@
       'board-buttons': function(t, options) {
         var me = t.getContext().member;
         if (me !== ADMIN_ID) return [];
-
         return [{
           icon: './icon.svg',
           text: 'Reporty času',
           callback: function(t) {
-            return t.modal({
-              title: "Přehled odpracovaného času",
-              url: './report.html',
-              fullscreen: true
-            });
+            return t.modal({ title: "Přehled odpracovaného času", url: './report.html', fullscreen: true });
           }
         }];
       },
@@ -120,16 +103,11 @@
           icon: './icon.svg',
           text: 'Odeslat později',
           callback: function(t) {
-            return t.popup({
-              title: 'Naplánovat komentář',
-              url: './scheduler.html',
-              height: 280
-            });
+            return t.popup({ title: 'Naplánovat komentář', url: './scheduler.html', height: 280 });
           }
         }];
       }
     }, {
-      // TENTO BLOK KONFIGURACE CHYBĚL:
       appKey: '4970b28a9bf54fcfa9298b7e4e50660f',
       appName: 'Private Time Tracker'
     });
