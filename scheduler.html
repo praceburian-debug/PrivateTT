@@ -4,30 +4,17 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
-  <style>
-    .item { border-bottom: 1px solid #eee; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; }
-    .item-info { font-size: 12px; }
-    .delete-btn { color: red; cursor: pointer; border: none; background: none; font-size: 18px; }
-    h4 { margin-top: 20px; border-top: 2px solid #0079bf; padding-top: 10px; }
-  </style>
 </head>
 <body style="padding: 15px;">
   <div id="loading">Načítám...</div>
-  
   <div id="auth-section" style="display:none; text-align:center;">
-    <p>Pro odesílání komentářů musíš aplikaci povolit přístup.</p>
-    <button id="auth-btn" class="mod-primary">Autorizovat</button>
+    <button id="auth-btn" class="mod-primary">Autorizovat aplikaci</button>
   </div>
-
   <div id="scheduler-form" style="display:none;">
-    <label>Kdy odeslat?</label>
     <input type="datetime-local" id="date" style="width:100%; margin-bottom:10px;">
-    <label>Zpráva</label>
-    <textarea id="msg" style="width:100%; height:60px;" placeholder="Napiš komentář..."></textarea>
+    <textarea id="msg" style="width:100%; height:60px;" placeholder="Zpráva..."></textarea>
     <button id="save-btn" class="mod-primary" style="width:100%; margin-top:10px;">Naplánovat</button>
-
-    <h4>Naplánované fronty na této kartě:</h4>
-    <div id="list-container">Žádné naplánované zprávy.</div>
+    <div id="list-container" style="margin-top:15px; font-size:12px;"></div>
   </div>
 
   <script>
@@ -36,76 +23,45 @@
       appName: 'Private Time Tracker'
     });
 
+    // Zobrazení seznamu zpráv
     function updateList() {
-      return t.get('card', 'shared', 'scheduled_comments', [])
-        .then(function(comments) {
-          var container = document.getElementById('list-container');
-          if (!comments || comments.length === 0) {
-            container.innerHTML = "Žádné naplánované zprávy.";
-            return;
-          }
-          
-          var html = '';
-          comments.forEach(function(c, index) {
-            var d = new Date(c.date).toLocaleString('cs-CZ');
-            html += '<div class="item"><div class="item-info"><strong>' + d + '</strong><br>' + c.msg + '</div>' +
-                    '<button class="delete-btn" onclick="deleteItem(' + index + ')">&times;</button></div>';
-          });
-          container.innerHTML = html;
-          t.sizeTo('#scheduler-form'); // Upraví výšku okna podle obsahu
-        });
+      t.get('card', 'shared', 'scheduled_comments', []).then(function(list) {
+        var c = document.getElementById('list-container');
+        if(!list.length) { c.innerHTML = "Žádné zprávy."; return; }
+        c.innerHTML = list.map((item, i) => `<div>${new Date(item.date).toLocaleString()} - ${item.msg}</div>`).join('');
+      });
     }
 
-    window.deleteItem = function(index) {
-      return t.get('card', 'shared', 'scheduled_comments', [])
-        .then(function(list) {
-          list.splice(index, 1);
-          return t.set('card', 'shared', 'scheduled_comments', list);
-        })
-        .then(function() { updateList(); });
-    };
-
-    function render() {
+    t.render(function() {
       return t.getRestApi().isAuthorized()
-        .then(function(authorized) {
+        .then(function(auth) {
           document.getElementById('loading').style.display = 'none';
-          if (authorized) {
+          if(auth) {
             document.getElementById('scheduler-form').style.display = 'block';
-            var now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.getElementById('date').value = now.toISOString().slice(0,16);
             updateList();
           } else {
             document.getElementById('auth-section').style.display = 'block';
           }
-        });
-    }
-
-    render();
+        })
+        .catch(function(e) { console.error("Trello API Error:", e); });
+    });
 
     document.getElementById('auth-btn').onclick = function() {
-      t.getRestApi().authorize({ scope: 'read,write', expiration: 'never', name: 'Private Time Tracker', type: 'popup' })
-        .then(function() { render(); });
+      t.getRestApi().authorize({ scope: 'read,write', type: 'popup', expiration: 'never' })
+        .then(() => { location.reload(); })
+        .catch(err => { alert("Chyba autorizace: " + err.message); });
     };
 
     document.getElementById('save-btn').onclick = function() {
       var d = document.getElementById('date').value;
       var m = document.getElementById('msg').value;
-      if(!d || !m) return;
-
-      t.getRestApi().getToken()
-        .then(function(token) {
-          var maskedToken = btoa(token);
-          return t.get('card', 'shared', 'scheduled_comments', [])
-            .then(function(list) {
-              list.push({ date: d, msg: m, token: maskedToken });
-              return t.set('card', 'shared', 'scheduled_comments', list);
-            });
-        })
-        .then(function() { 
-          document.getElementById('msg').value = ''; // Vyčistí pole
-          updateList(); 
-        });
+      t.getRestApi().getToken().then(function(token) {
+        return t.get('card', 'shared', 'scheduled_comments', [])
+          .then(list => {
+            list.push({ date: d, msg: m, token: btoa(token) });
+            return t.set('card', 'shared', 'scheduled_comments', list);
+          });
+      }).then(() => { updateList(); });
     };
   </script>
 </body>
