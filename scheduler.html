@@ -49,15 +49,20 @@
 
     render();
 
-   document.getElementById('auth-btn').onclick = function() {
-  t.getRestApi().authorize({ 
-    scope: 'read,write',
-    type: 'popup', // Vynutí vyskakovací okno pro souhlas
-    expiration: 'never'
-  })
-  .then(function() { render(); })
-  .catch(function(err) { alert("Chyba: " + err.message); });
-};
+document.getElementById('auth-btn').onclick = function() {
+      t.getRestApi().authorize({ 
+        scope: 'read,write',
+        expiration: 'never',
+        name: 'Private Time Tracker',
+        type: 'popup' // Toto je kritické pro první získání tokenu
+      })
+      .then(function() { 
+        render(); // Po úspěšné autorizaci překreslíme okno na formulář
+      })
+      .catch(function(err) { 
+        alert("Autorizace selhala: " + err.message); 
+      });
+    };
 
     document.getElementById('save-btn').onclick = function() {
       var d = document.getElementById('date').value;
