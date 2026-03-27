@@ -22,6 +22,9 @@
       return t.get('card', 'shared', 'scheduled_comments', [])
       .then(function(comments) {
         if (!comments || comments.length === 0) return;
+        if (toSend.length > 0) {
+  console.log("Zkouším odeslat naplánované komentáře:", toSend); // <--- Přidej tohle
+  return t.getRestApi().getToken().then(function(token) {
 
         var now = new Date().getTime();
         var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
