@@ -1,49 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
   <style>
-    body { padding: 12px; font-family: -apple-system, sans-serif; }
+    body { padding: 12px; font-family: -apple-system, sans-serif; color: var(--ds-text, #172b4d); }
     label { display: block; margin-bottom: 4px; font-weight: 600; color: var(--ds-text-subtle, #5e6c84); font-size: 12px; }
-    input, textarea { width: 100%; margin-bottom: 12px; border: 1px solid var(--ds-border, #dfe1e6); border-radius: 3px; padding: 8px; box-sizing: border-box; }
+    input, textarea { 
+      width: 100%; margin-bottom: 12px; border: 1px solid var(--ds-border, #dfe1e6); 
+      border-radius: 3px; padding: 8px; box-sizing: border-box; background: var(--ds-background-input, #fff);
+    }
     textarea { height: 80px; resize: none; }
-    button { width: 100%; background: #5794F2; color: white; border: none; padding: 10px; border-radius: 3px; font-weight: 600; cursor: pointer; }
-    button:hover { background: #4582e0; }
+    .btn-primary { width: 100%; background: #5794F2; color: white; border: none; padding: 10px; border-radius: 3px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #4582e0; }
+    .auth-container { text-align: center; padding-top: 20px; }
+    #scheduler-form { display: none; }
   </style>
 </head>
 <body>
-  <label for="date">Kdy odeslat?</label>
-  <input type="datetime-local" id="date">
 
-  <label for="msg">Zpráva</label>
-  <textarea id="msg" placeholder="Napište text komentáře..."></textarea>
+  <div id="auth-section" class="auth-container" style="display: none;">
+    <p>Pro odesílání komentářů je vyžadována autorizace.</p>
+    <button id="auth-btn" class="btn-primary">Povolit přístup k zápisu</button>
+  </div>
 
-  <button id="save-btn">Naplánovat odeslání</button>
+  <div id="scheduler-form">
+    <label for="date">Kdy odeslat?</label>
+    <input type="datetime-local" id="date">
+
+    <label for="msg">Zpráva</label>
+    <textarea id="msg" placeholder="Napište text komentáře..."></textarea>
+
+    <button id="save-btn" class="btn-primary">Naplánovat odeslání</button>
+  </div>
 
   <script>
     var t = TrelloPowerUp.iframe();
 
+    // Kontrola autorizace při načtení
+    t.getRestApi().isAuthorized()
+      .then(function(authorized) {
+        if (authorized) {
+          document.getElementById('scheduler-form').style.display = 'block';
+        } else {
+          document.getElementById('auth-section').style.display = 'block';
+        }
+      });
+
+    // Kliknutí na Autorizovat
+    document.getElementById('auth-btn').addEventListener('click', function() {
+      t.getRestApi().authorize({ scope: 'read,write' })
+        .then(function() {
+          document.getElementById('auth-section').style.display = 'none';
+          document.getElementById('scheduler-form').style.display = 'block';
+        });
+    });
+
+    // Uložení naplánovaného komentáře
     document.getElementById('save-btn').addEventListener('click', function() {
       var date = document.getElementById('date').value;
       var msg = document.getElementById('msg').value;
 
-      if (!date || !msg) return;
+      if (!date || !msg) {
+        return t.alert({ message: 'Vyplňte prosím datum i zprávu.', display: 'error' });
+      }
 
-      // Uložíme data do karty
       t.get('card', 'shared', 'scheduled_comments', [])
-      .then(function(comments) {
-        comments.push({
-          id: Math.random().toString(36).substr(2, 9),
-          date: date,
-          msg: msg,
-          user: t.getContext().member
+        .then(function(comments) {
+          comments.push({
+            id: Math.random().toString(36).substr(2, 9),
+            date: date,
+            msg: msg
+          });
+          return t.set('card', 'shared', 'scheduled_comments', comments);
+        })
+        .then(function() {
+          // Zavře popup po úspěšném uložení
+          t.closePopup();
         });
-        return t.set('card', 'shared', 'scheduled_comments', comments);
-      })
-      .then(function() {
-        return t.closePopup();
-      });
     });
   </script>
 </body>
