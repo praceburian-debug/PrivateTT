@@ -15,37 +15,35 @@
       return h + ":" + (m < 10 ? "0" : "") + m;
     }
 
-    function checkScheduledComments(t) {
-      // Tuto logiku spustíme jen pokud jsi to ty (Admin / tvůj běžící prohlížeč)
-      if (t.getContext().member !== ADMIN_ID) return;
+   function checkScheduledComments(t) {
+  if (t.getContext().member !== ADMIN_ID) return;
 
-      return t.get('card', 'shared', 'scheduled_comments', [])
-      .then(function(comments) {
-        if (!comments || comments.length === 0) return;
+  return t.get('card', 'shared', 'scheduled_comments', [])
+  .then(function(comments) {
+    if (!comments || comments.length === 0) return;
 
-        var now = new Date().getTime();
-        var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
-        var remaining = comments.filter(c => new Date(c.date).getTime() > now);
+    var now = new Date().getTime();
+    var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
+    var remaining = comments.filter(c => new Date(c.date).getTime() > now);
 
-        if (toSend.length > 0) {
-          return t.card('id').then(function(cardData) {
-            var cardId = cardData.id;
-            
-           var promises = toSend.map(function(c) {
-  // ROZBALENÍ TOKENU (atob)
-  var realToken = atob(c.token);
-  var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${realToken}`;
-  return fetch(url, { method: 'POST' });
-});
+    if (toSend.length > 0) {
+      return t.card('id').then(function(cardData) {
+        var cardId = cardData.id;
+        
+        var promises = toSend.map(function(c) {
+          // ROZBALÍME TOKEN
+          var realToken = atob(c.token);
+          var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${realToken}`;
+          return fetch(url, { method: 'POST' });
+        });
 
-            return Promise.all(promises).then(function() {
-              return t.set('card', 'shared', 'scheduled_comments', remaining);
-            });
-          });
-        }
+        return Promise.all(promises).then(function() {
+          return t.set('card', 'shared', 'scheduled_comments', remaining);
+        });
       });
     }
-
+  });
+}
     TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
         checkScheduledComments(t); // Tvůj prohlížeč skenuje frontu
