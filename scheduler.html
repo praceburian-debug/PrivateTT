@@ -22,7 +22,10 @@
   </div>
 
   <script>
-    var t = TrelloPowerUp.iframe();
+    var t = TrelloPowerUp.iframe({
+  appKey: '4970b28a9bf54fcfa9298b7e4e50660f', // Tvůj API klíč
+  appName: 'Private Time Tracker'
+});
 
     t.getRestApi().isAuthorized()
       .then(function(authorized) {
