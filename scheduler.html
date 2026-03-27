@@ -49,9 +49,15 @@
 
     render();
 
-    document.getElementById('auth-btn').onclick = function() {
-      t.getRestApi().authorize({ scope: 'read,write' }).then(function() { render(); });
-    };
+   document.getElementById('auth-btn').onclick = function() {
+  t.getRestApi().authorize({ 
+    scope: 'read,write',
+    type: 'popup', // Vynutí vyskakovací okno pro souhlas
+    expiration: 'never'
+  })
+  .then(function() { render(); })
+  .catch(function(err) { alert("Chyba: " + err.message); });
+};
 
     document.getElementById('save-btn').onclick = function() {
       var d = document.getElementById('date').value;
