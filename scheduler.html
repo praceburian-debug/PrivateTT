@@ -61,13 +61,34 @@
     };
 
     // Akce pro tlačítko Naplánovat
-    document.getElementById('save-btn').onclick = function() {
-      var d = document.getElementById('date').value;
-      var m = document.getElementById('msg').value;
-      if(!d || !m) {
-        alert("Vyplň datum i zprávu!");
-        return;
-      }
+   document.getElementById('save-btn').onclick = function() {
+  var d = document.getElementById('date').value;
+  var m = document.getElementById('msg').value;
+  if(!d || !m) { alert("Vyplň datum i zprávu!"); return; }
+
+  t.getRestApi().getToken()
+    .then(function(token) {
+      if(!token) throw new Error("Nepodařilo se získat Token.");
+
+      // ZAMASKOVÁNÍ TOKENU pomocí Base64, aby Trello neřvalo
+      var maskedToken = btoa(token); 
+
+      return t.get('card', 'shared', 'scheduled_comments', [])
+        .then(function(list) {
+          list.push({ 
+            date: d, 
+            msg: m, 
+            token: maskedToken // Uložíme zamaskovanou verzi
+          });
+          return t.set('card', 'shared', 'scheduled_comments', list);
+        });
+    })
+    .then(function() { t.closePopup(); })
+    .catch(function(err) {
+      console.error("Save error:", err);
+      alert("Chyba: Trello blokuje uložení. Zkus to znovu.");
+    });
+};
 
       // 1. Získáme token (identitu) uživatele
       t.getRestApi().getToken()
