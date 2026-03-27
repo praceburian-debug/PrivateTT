@@ -18,37 +18,38 @@
     }
 
     // FUNKCE PRO KONTROLU A ODESLÁNÍ NAPLÁNOVANÝCH KOMENTÁŘŮ
-    function checkScheduledComments(t) {
-      return t.get('card', 'shared', 'scheduled_comments', [])
-      .then(function(comments) {
-        if (!comments || comments.length === 0) return;
+  function checkScheduledComments(t) {
+  return t.get('card', 'shared', 'scheduled_comments', [])
+  .then(function(comments) {
+    if (!comments || comments.length === 0) return;
 
-        var now = new Date().getTime();
-        var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
-        var remaining = comments.filter(c => new Date(c.date).getTime() > now);
+    var now = new Date().getTime();
+    var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
+    var remaining = comments.filter(c => new Date(c.date).getTime() > now);
 
-        if (toSend.length > 0) {
-          // Tady to padalo - getRestApi už teď bude fungovat
-          return t.getRestApi().getToken().then(function(token) {
-            if (!token) return; 
+    if (toSend.length > 0) {
+      // Získáme token aktuálně přihlášeného uživatele
+      return t.getRestApi().getToken().then(function(token) {
+        // Pokud kolega ještě nedal "Autorizovat", token nebude mít a nic se neodešle (pošle se to, až kartu otevřeš ty nebo on po autorizaci)
+        if (!token) return; 
 
-            return t.card('id').then(function(cardData) {
-              var cardId = cardData.id;
-              
-              var promises = toSend.map(function(c) {
-                var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${token}`;
-                return fetch(url, { method: 'POST' });
-              });
-
-              return Promise.all(promises).then(function() {
-                // Po úspěšném odeslání vymažeme odeslané z fronty
-                return t.set('card', 'shared', 'scheduled_comments', remaining);
-              });
-            });
+        return t.card('id').then(function(cardData) {
+          var cardId = cardData.id;
+          
+          var promises = toSend.map(function(c) {
+            // Používáme token aktuálního uživatele - Trello pak pozná, kdo komentář píše
+            var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${token}`;
+            return fetch(url, { method: 'POST' });
           });
-        }
+
+          return Promise.all(promises).then(function() {
+            return t.set('card', 'shared', 'scheduled_comments', remaining);
+          });
+        });
       });
     }
+  });
+}
 
     // TADY JE TA NEJDŮLEŽITĚJŠÍ ZMĚNA - PŘIDÁNÍ APPKEY A APPNAME
     TrelloPowerUp.initialize({
