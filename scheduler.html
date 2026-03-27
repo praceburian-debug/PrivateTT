@@ -22,12 +22,12 @@
   </div>
 
   <script>
+    // Inicializace s tvým klíčem - TOHLE JE DŮLEŽITÉ
     var t = TrelloPowerUp.iframe({
       appKey: '4970b28a9bf54fcfa9298b7e4e50660f',
       appName: 'Private Time Tracker'
     });
 
-    // Funkce pro zobrazení správné sekce
     function render() {
       return t.getRestApi().isAuthorized()
         .then(function(authorized) {
@@ -47,32 +47,41 @@
 
     render();
 
-    // Tlačítko Autorizovat
     document.getElementById('auth-btn').onclick = function() {
       t.getRestApi().authorize({ scope: 'read,write' })
         .then(function() { render(); });
     };
 
-    // Tlačítko Naplánovat
     document.getElementById('save-btn').onclick = function() {
       var d = document.getElementById('date').value;
       var m = document.getElementById('msg').value;
       if(!d || !m) return;
-      
-      t.getRestApi().getToken().then(function(userToken) {
-        if(!userToken) return;
 
-        t.get('card', 'shared', 'scheduled_comments', [])
-          .then(function(list) {
-            list.push({ 
-              date: d, 
-              msg: m, 
-              token: userToken // TADY UKLÁDÁME IDENTITU AUTORA
+      // Získáme token toho, kdo to právě píše
+      t.getRestApi().getToken()
+        .then(function(token) {
+          if(!token) {
+            alert("Chyba: Nemám tvůj token. Zkus se znovu autorizovat.");
+            return;
+          }
+
+          return t.get('card', 'shared', 'scheduled_comments', [])
+            .then(function(list) {
+              list.push({ 
+                date: d, 
+                msg: m, 
+                token: token // Uložíme jeho identitu k této zprávě
+              });
+              return t.set('card', 'shared', 'scheduled_comments', list);
+            })
+            .then(function() {
+              t.closePopup();
             });
-            return t.set('card', 'shared', 'scheduled_comments', list);
-          })
-          .then(function() { t.closePopup(); });
-      });
+        })
+        .catch(function(err) {
+          console.error(err);
+          alert("Něco se nepovedlo. Zkontroluj konzoli (F12).");
+        });
     };
   </script>
 </body>
