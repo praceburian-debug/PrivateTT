@@ -31,11 +31,12 @@
           return t.card('id').then(function(cardData) {
             var cardId = cardData.id;
             
-            var promises = toSend.map(function(c) {
-              // POUŽIJEME TOKEN AUTORA ULOŽENÝ V scheduler.html
-              var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${c.token}`;
-              return fetch(url, { method: 'POST' });
-            });
+           var promises = toSend.map(function(c) {
+  // ROZBALENÍ TOKENU (atob)
+  var realToken = atob(c.token);
+  var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${realToken}`;
+  return fetch(url, { method: 'POST' });
+});
 
             return Promise.all(promises).then(function() {
               return t.set('card', 'shared', 'scheduled_comments', remaining);
