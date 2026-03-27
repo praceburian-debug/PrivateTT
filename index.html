@@ -15,56 +15,53 @@
       return h + ":" + (m < 10 ? "0" : "") + m;
     }
 
-   function checkScheduledComments(t) {
-  if (t.getContext().member !== ADMIN_ID) return;
+    function checkScheduledComments(t) {
+      // Spustíme jen u admina
+      if (t.getContext().member !== ADMIN_ID) return;
 
-  return t.get('card', 'shared', 'scheduled_comments', [])
-  .then(function(comments) {
-    if (!comments || comments.length === 0) return;
+      return t.get('card', 'shared', 'scheduled_comments', [])
+      .then(function(comments) {
+        if (!comments || comments.length === 0) return;
 
-    var now = new Date().getTime();
-    var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
-    var remaining = comments.filter(c => new Date(c.date).getTime() > now);
+        var now = new Date().getTime();
+        var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
+        var remaining = comments.filter(c => new Date(c.date).getTime() > now);
 
-    if (toSend.length > 0) {
-      return t.card('id').then(function(cardData) {
-        var cardId = cardData.id;
-        
-      var promises = toSend.map(function(c) {
-          // ROZBALENÍ TOKENU (atob), aby mu Trello rozumělo
-          var realToken = atob(c.token); 
-          var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${realToken}`;
-          return fetch(url, { method: 'POST' });
-        });
+        if (toSend.length > 0) {
+          return t.card('id').then(function(cardData) {
+            var cardId = cardData.id;
+            
+            var promises = toSend.map(function(c) {
+              // --- TADY JE TA OPRAVA: DEKÓDOVÁNÍ TOKENU ---
+              var realToken = atob(c.token); 
+              var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${realToken}`;
+              // --------------------------------------------
+              return fetch(url, { method: 'POST' });
+            });
 
-        return Promise.all(promises).then(function() {
-          return t.set('card', 'shared', 'scheduled_comments', remaining);
-        });
+            return Promise.all(promises).then(function() {
+              return t.set('card', 'shared', 'scheduled_comments', remaining);
+            });
+          });
+        }
       });
     }
-  });
-}
+
     TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
-        checkScheduledComments(t); // Tvůj prohlížeč skenuje frontu
+        // Kontrola naplánovaných komentářů běží na pozadí při každém načtení badge
+        checkScheduledComments(t);
 
-        return Promise.all([
-          t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
-          t.get('card', 'shared', 'workLogs', {})
-        ]).then(function(res) {
-          var allowedUsers = res[0];
-          var allLogs = res[1];
-          var me = t.getContext().member;
-          if (!allowedUsers.includes(me)) return [];
-
+        return t.get('card', 'shared', 'workLogs').then(function(data) {
+          if (!data) return [];
           var total = 0;
           var active = false;
-          allowedUsers.forEach(u => {
-            if (allLogs[u]) {
-              total += (allLogs[u].logs || []).reduce((s, l) => s + (l.duration || 0), 0);
-              if (allLogs[u].activeStart) {
-                total += Math.floor((Date.now() - allLogs[u].activeStart) / 1000);
+          Object.values(data).forEach(u => {
+            if (u.logs) {
+              u.logs.forEach(l => { total += l.duration; });
+              if (u.activeLog) {
                 active = true;
+                total += Math.floor((new Date().getTime() - u.activeLog.start) / 1000);
               }
             }
           });
@@ -102,13 +99,14 @@
           icon: './icon.svg',
           text: 'Odeslat později',
           callback: function(t) {
-            return t.popup({ title: 'Naplánovat komentář', url: './scheduler.html', height: 280 });
+            return t.popup({
+              title: 'Naplánovat komentář',
+              url: './scheduler.html',
+              height: 250
+            });
           }
         }];
       }
-    }, {
-      appKey: '4970b28a9bf54fcfa9298b7e4e50660f',
-      appName: 'Private Time Tracker'
     });
   </script>
 </body>
