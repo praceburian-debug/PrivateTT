@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <style>
+    body { padding: 12px; font-family: -apple-system, sans-serif; }
+    label { display: block; margin-bottom: 4px; font-weight: 600; color: var(--ds-text-subtle, #5e6c84); font-size: 12px; }
+    input, textarea { width: 100%; margin-bottom: 12px; border: 1px solid var(--ds-border, #dfe1e6); border-radius: 3px; padding: 8px; box-sizing: border-box; }
+    textarea { height: 80px; resize: none; }
+    button { width: 100%; background: #5794F2; color: white; border: none; padding: 10px; border-radius: 3px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #4582e0; }
+  </style>
+</head>
+<body>
+  <label for="date">Kdy odeslat?</label>
+  <input type="datetime-local" id="date">
+
+  <label for="msg">Zpráva</label>
+  <textarea id="msg" placeholder="Napište text komentáře..."></textarea>
+
+  <button id="save-btn">Naplánovat odeslání</button>
+
+  <script>
+    var t = TrelloPowerUp.iframe();
+
+    document.getElementById('save-btn').addEventListener('click', function() {
+      var date = document.getElementById('date').value;
+      var msg = document.getElementById('msg').value;
+
+      if (!date || !msg) return;
+
+      // Uložíme data do karty
+      t.get('card', 'shared', 'scheduled_comments', [])
+      .then(function(comments) {
+        comments.push({
+          id: Math.random().toString(36).substr(2, 9),
+          date: date,
+          msg: msg,
+          user: t.getContext().member
+        });
+        return t.set('card', 'shared', 'scheduled_comments', comments);
+      })
+      .then(function() {
+        return t.closePopup();
+      });
+    });
+  </script>
+</body>
+</html>
