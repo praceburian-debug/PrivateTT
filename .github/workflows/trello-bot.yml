@@ -1,1 +1,25 @@
 
+name: Trello Scheduler Bot
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Umožní ti to spustit ručně pro test
+
+jobs:
+  check-and-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Run Bot
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+        run: node bot.js
