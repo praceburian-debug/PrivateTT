@@ -30,9 +30,9 @@
       return t.card('id').then(function(cardData) {
         var cardId = cardData.id;
         
-        var promises = toSend.map(function(c) {
-          // ROZBALÍME TOKEN
-          var realToken = atob(c.token);
+      var promises = toSend.map(function(c) {
+          // ROZBALENÍ TOKENU (atob), aby mu Trello rozumělo
+          var realToken = atob(c.token); 
           var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${realToken}`;
           return fetch(url, { method: 'POST' });
         });
