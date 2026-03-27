@@ -23,48 +23,57 @@
 
   <script>
     var t = TrelloPowerUp.iframe({
-  appKey: '4970b28a9bf54fcfa9298b7e4e50660f', // Tvůj API klíč
-  appName: 'Private Time Tracker'
-});
+      appKey: '4970b28a9bf54fcfa9298b7e4e50660f',
+      appName: 'Private Time Tracker'
+    });
 
-    t.getRestApi().isAuthorized()
-      .then(function(authorized) {
-        document.getElementById('loading').style.display = 'none';
-        if (authorized) {
-          document.getElementById('scheduler-form').style.display = 'block';
-          // Nastaví aktuální čas
-          var now = new Date();
-          now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-          document.getElementById('date').value = now.toISOString().slice(0,16);
-        } else {
-          document.getElementById('auth-section').style.display = 'block';
-        }
-      })
-      .catch(function(err) {
-        // POKUD SE TO ZASEKNE, VYPÍŠE TO SEM CHYBU
-        document.getElementById('loading').innerHTML = 
-          "<b style='color:red'>Chyba autorizace!</b><br>Zkontroluj, zda máš v Trello Adminu v sekci 'API Key' přidanou doménu do 'Authorized Origins'.";
-        console.error(err);
-      });
-
-   document.getElementById('save-btn').onclick = function() {
-  var d = document.getElementById('date').value;
-  var m = document.getElementById('msg').value;
-  
-  // Získáme token aktuálního uživatele (kolegy)
-  t.getRestApi().getToken().then(function(token) {
-    t.get('card', 'shared', 'scheduled_comments', [])
-      .then(function(list) {
-        list.push({ 
-          date: d, 
-          msg: m, 
-          token: token // Uložíme jeho soukromý klíč k této zprávě
+    // Funkce pro zobrazení správné sekce
+    function render() {
+      return t.getRestApi().isAuthorized()
+        .then(function(authorized) {
+          document.getElementById('loading').style.display = 'none';
+          if (authorized) {
+            document.getElementById('scheduler-form').style.display = 'block';
+            document.getElementById('auth-section').style.display = 'none';
+            var now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('date').value = now.toISOString().slice(0,16);
+          } else {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('scheduler-form').style.display = 'none';
+          }
         });
-        return t.set('card', 'shared', 'scheduled_comments', list);
-      })
-      .then(() => t.closePopup());
-  });
-};
+    }
+
+    render();
+
+    // Tlačítko Autorizovat
+    document.getElementById('auth-btn').onclick = function() {
+      t.getRestApi().authorize({ scope: 'read,write' })
+        .then(function() { render(); });
+    };
+
+    // Tlačítko Naplánovat
+    document.getElementById('save-btn').onclick = function() {
+      var d = document.getElementById('date').value;
+      var m = document.getElementById('msg').value;
+      if(!d || !m) return;
+      
+      t.getRestApi().getToken().then(function(userToken) {
+        if(!userToken) return;
+
+        t.get('card', 'shared', 'scheduled_comments', [])
+          .then(function(list) {
+            list.push({ 
+              date: d, 
+              msg: m, 
+              token: userToken // TADY UKLÁDÁME IDENTITU AUTORA
+            });
+            return t.set('card', 'shared', 'scheduled_comments', list);
+          })
+          .then(function() { t.closePopup(); });
+      });
+    };
   </script>
 </body>
 </html>
