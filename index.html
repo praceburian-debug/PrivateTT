@@ -5,9 +5,10 @@
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
 </head>
 <body>
- <script>
-    // TVOJE KONSTANTA
+  <script>
+    // --- KONFIGURACE ---
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
+    const TRELLO_API_KEY = '4970b28a9bf54fcfa9298b7e4e50660f'; // <--- DOPLŇ ZDE
 
     // POMOCNÁ FUNKCE PRO FORMÁT ČASU
     function formatToHHMM(seconds) {
@@ -23,42 +24,39 @@
         if (!comments || comments.length === 0) return;
 
         var now = new Date().getTime();
-        var remaining = [];
-        var toSend = [];
-
-        comments.forEach(function(c) {
-          if (new Date(c.date).getTime() <= now) {
-            toSend.push(c);
-          } else {
-            remaining.push(c);
-          }
-        });
+        var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
+        var remaining = comments.filter(c => new Date(c.date).getTime() > now);
 
         if (toSend.length > 0) {
-          // Pro každý komentář, který už měl být odeslán
-          toSend.forEach(function(c) {
-            // Trello API volání pro přidání komentáře
-            t.getRestApi().getToken().then(function(token) {
-              if(!token) return; // Pokud uživatel neschválil API, smůla
+          return t.getRestApi().getToken().then(function(token) {
+            if (!token) return; // Uživatel ještě neautorizoval v scheduleru
+
+            // Získání ID aktuální karty
+            return t.card('id').then(function(cardData) {
+              var cardId = cardData.id;
               
-              // Odeslání komentáře přes Trello REST API
-              // Poznámka: vyžaduje t.getRestApi().isAuthorized()
-              // Pro jednoduchost teď komentář jen uložíme jako "odeslaný" do logu nebo provedeme přes t.set
-              console.log("Odesílám komentář: " + c.msg);
-              // Zde by následoval fetch na Trello API
+              // Vytvoříme pole požadavků pro Trello API
+              var promises = toSend.map(function(c) {
+                var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${token}`;
+                return fetch(url, { method: 'POST' });
+              });
+
+              // Počkáme na všechna odeslání a pak aktualizujeme Trello data
+              return Promise.all(promises).then(function() {
+                return t.set('card', 'shared', 'scheduled_comments', remaining);
+              });
             });
           });
-          // Aktualizujeme seznam (odstraníme odeslané)
-          return t.set('card', 'shared', 'scheduled_comments', remaining);
         }
       });
     }
 
     TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
-        // Při každém načtení badge zkontrolujeme, zda není čas něco odeslat
+        // Spustíme kontrolu odeslání (běží na pozadí)
         checkScheduledComments(t);
 
+        // Vykreslení badges (Time Tracker)
         return Promise.all([
           t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
           t.get('card', 'shared', 'workLogs', {})
