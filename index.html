@@ -8,7 +8,7 @@
   <script>
     // --- KONFIGURACE ---
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
-    const TRELLO_API_KEY = '4970b28a9bf54fcfa9298b7e4e50660f'; // <--- DOPLŇ ZDE
+    const TRELLO_API_KEY = '4970b28a9bf54fcfa9298b7e4e50660f'; 
 
     // POMOCNÁ FUNKCE PRO FORMÁT ČASU
     function formatToHHMM(seconds) {
@@ -22,30 +22,26 @@
       return t.get('card', 'shared', 'scheduled_comments', [])
       .then(function(comments) {
         if (!comments || comments.length === 0) return;
-        if (toSend.length > 0) {
-  console.log("Zkouším odeslat naplánované komentáře:", toSend); // <--- Přidej tohle
-  return t.getRestApi().getToken().then(function(token) {
 
         var now = new Date().getTime();
         var toSend = comments.filter(c => new Date(c.date).getTime() <= now);
         var remaining = comments.filter(c => new Date(c.date).getTime() > now);
 
         if (toSend.length > 0) {
+          // Tady to padalo - getRestApi už teď bude fungovat
           return t.getRestApi().getToken().then(function(token) {
-            if (!token) return; // Uživatel ještě neautorizoval v scheduleru
+            if (!token) return; 
 
-            // Získání ID aktuální karty
             return t.card('id').then(function(cardData) {
               var cardId = cardData.id;
               
-              // Vytvoříme pole požadavků pro Trello API
               var promises = toSend.map(function(c) {
                 var url = `https://api.trello.com/1/cards/${cardId}/actions/comments?text=${encodeURIComponent(c.msg)}&key=${TRELLO_API_KEY}&token=${token}`;
                 return fetch(url, { method: 'POST' });
               });
 
-              // Počkáme na všechna odeslání a pak aktualizujeme Trello data
               return Promise.all(promises).then(function() {
+                // Po úspěšném odeslání vymažeme odeslané z fronty
                 return t.set('card', 'shared', 'scheduled_comments', remaining);
               });
             });
@@ -54,12 +50,11 @@
       });
     }
 
+    // TADY JE TA NEJDŮLEŽITĚJŠÍ ZMĚNA - PŘIDÁNÍ APPKEY A APPNAME
     TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
-        // Spustíme kontrolu odeslání (běží na pozadí)
         checkScheduledComments(t);
 
-        // Vykreslení badges (Time Tracker)
         return Promise.all([
           t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
           t.get('card', 'shared', 'workLogs', {})
@@ -132,6 +127,10 @@
           }
         }];
       }
+    }, {
+      // TENTO BLOK KONFIGURACE CHYBĚL:
+      appKey: '4970b28a9bf54fcfa9298b7e4e50660f',
+      appName: 'Private Time Tracker'
     });
   </script>
 </body>
