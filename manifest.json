@@ -6,7 +6,8 @@
   "capabilities": [
     "card-badges",
     "card-back-section",
-    "board-buttons"
+    "board-buttons",
+    "card-buttons"
   ],
   "connectorUrl": "./index.html"
 }
