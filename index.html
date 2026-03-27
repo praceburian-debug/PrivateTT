@@ -5,19 +5,60 @@
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
 </head>
 <body>
-  <script>
+ <script>
     // TVOJE KONSTANTA
     const ADMIN_ID = '651e8ba7f2ed2f797856dfed'; 
 
-    // TVOJE POMOCNÁ FUNKCE
+    // POMOCNÁ FUNKCE PRO FORMÁT ČASU
     function formatToHHMM(seconds) {
       var h = Math.floor(seconds / 3600);
       var m = Math.floor((seconds % 3600) / 60);
       return h + ":" + (m < 10 ? "0" : "") + m;
     }
 
+    // FUNKCE PRO KONTROLU A ODESLÁNÍ NAPLÁNOVANÝCH KOMENTÁŘŮ
+    function checkScheduledComments(t) {
+      return t.get('card', 'shared', 'scheduled_comments', [])
+      .then(function(comments) {
+        if (!comments || comments.length === 0) return;
+
+        var now = new Date().getTime();
+        var remaining = [];
+        var toSend = [];
+
+        comments.forEach(function(c) {
+          if (new Date(c.date).getTime() <= now) {
+            toSend.push(c);
+          } else {
+            remaining.push(c);
+          }
+        });
+
+        if (toSend.length > 0) {
+          // Pro každý komentář, který už měl být odeslán
+          toSend.forEach(function(c) {
+            // Trello API volání pro přidání komentáře
+            t.getRestApi().getToken().then(function(token) {
+              if(!token) return; // Pokud uživatel neschválil API, smůla
+              
+              // Odeslání komentáře přes Trello REST API
+              // Poznámka: vyžaduje t.getRestApi().isAuthorized()
+              // Pro jednoduchost teď komentář jen uložíme jako "odeslaný" do logu nebo provedeme přes t.set
+              console.log("Odesílám komentář: " + c.msg);
+              // Zde by následoval fetch na Trello API
+            });
+          });
+          // Aktualizujeme seznam (odstraníme odeslané)
+          return t.set('card', 'shared', 'scheduled_comments', remaining);
+        }
+      });
+    }
+
     TrelloPowerUp.initialize({
       'card-badges': function(t, options) {
+        // Při každém načtení badge zkontrolujeme, zda není čas něco odeslat
+        checkScheduledComments(t);
+
         return Promise.all([
           t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]),
           t.get('card', 'shared', 'workLogs', {})
@@ -43,30 +84,29 @@
         });
       },
 
-    'card-back-section': function(t, options) {
-  return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
-    var me = t.getContext().member;
-    
-    // Pojistka pro admina + kontrola povolených
-    if (me !== ADMIN_ID && !allowed.includes(me)) return null;
+      'card-back-section': function(t, options) {
+        return t.get('card', 'shared', 'allowedUsers', [ADMIN_ID]).then(function(allowed) {
+          var me = t.getContext().member;
+          if (me !== ADMIN_ID && !allowed.includes(me)) return null;
 
-    return {
-      title: '', // PRÁZDNÉ - odstraní ten otravný nápis i čáru
-      icon: './icon.svg',
-      content: {
-        type: 'iframe',
-        url: t.signUrl('./section.html'),
-        initialHeight: 44 // Sladěno s výškou v section.html
-      }
-    };
-  });
-},
+          return {
+            title: '',
+            icon: './icon.svg',
+            content: {
+              type: 'iframe',
+              url: t.signUrl('./section.html'),
+              initialHeight: 44
+            }
+          };
+        });
+      },
+
       'board-buttons': function(t, options) {
         var me = t.getContext().member;
         if (me !== ADMIN_ID) return [];
 
         return [{
-          icon: './icon.svg', // Zjednodušená cesta pro button
+          icon: './icon.svg',
           text: 'Reporty času',
           callback: function(t) {
             return t.modal({
@@ -76,8 +116,21 @@
             });
           }
         }];
+      },
+
+      'card-buttons': function(t, options) {
+        return [{
+          icon: './icon.svg',
+          text: 'Odeslat později',
+          callback: function(t) {
+            return t.popup({
+              title: 'Naplánovat komentář',
+              url: './scheduler.html',
+              height: 280
+            });
+          }
+        }];
       }
-      // ----------------------------------------
     });
   </script>
 </body>
